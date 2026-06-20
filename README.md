@@ -1,7 +1,6 @@
 <div align="center">
-  <h1>🏥 MedAgent</h1>
-  <p><em>医学知识库问答与健康咨询辅助平台</em></p>
-  <p>基于 RAG + LangGraph 的智能医疗知识助手</p>
+  <h1>🏥 MedAgent-QDS</h1>
+  <p><em>A Multi-Agent Full-Stack Medical Question Answering and Decision Support Platform Powered by a Medical Knowledge Base</em></p>
 </div>
 
 ---
