@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: medagent
+  labels:
+    name: medagent
+    environment: production
+    app.kubernetes.io/name: medagent
+    app.kubernetes.io/part-of: medagent

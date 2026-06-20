@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: medagent
+  labels:
+    app.kubernetes.io/name: medagent
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: medagent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: medagent
+        app.kubernetes.io/component: worker
+        app.kubernetes.io/part-of: medagent
+    spec:
+      containers:
+        - name: worker
+          image: medagent-backend:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "worker.py"]
+          envFrom:
+            - configMapRef:
+                name: medagent-config
+            - secretRef:
+                name: medagent-secrets
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: uploads-data

@@ -1,0 +1,12 @@
+Classify the following medical/health question into exactly one category.
+
+Categories:
+- medical_qa: General medical knowledge questions, disease explanations, symptom analysis, treatment method inquiries
+- health_consult: Health consultation, lifestyle advice, preventive care, pre-consultation information organization
+- drug_qa: Medication-related questions, drug instructions, side effects, dosage information
+- paper_qa: Medical paper or academic literature questions, research methodology, paper summarization
+- unknown: Questions not related to medical or health topics, or unclear questions
+
+Question: {question}
+
+Respond with only the category name, nothing else.

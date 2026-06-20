@@ -1,0 +1,51 @@
+# =============================================================================
+# MedAgent — Python Dependencies
+# =============================================================================
+# Install:  pip install -r requirements.txt
+# Python:   3.11+
+# =============================================================================
+
+# ── Web Framework ──────────────────────────────────────────────────────────────
+fastapi>=0.104.1
+uvicorn[standard]>=0.24.0
+pydantic>=2.7.0
+pydantic-settings>=2.2.0
+python-multipart>=0.0.6
+aiofiles>=23.2.1
+
+# ── Database ───────────────────────────────────────────────────────────────────
+# PostgreSQL + pgvector (vector search for document chunks)
+psycopg2-binary>=2.9.10
+pgvector>=0.2.4
+# MySQL / MariaDB (relational data: users, KBs, docs, sessions, feedback)
+pymysql>=1.1.0
+# ORM & migrations
+sqlalchemy>=2.0.23
+alembic>=1.13.0
+
+# ── Auth ───────────────────────────────────────────────────────────────────────
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1
+cryptography>=41.0.0
+
+# ── Cache & Queue ──────────────────────────────────────────────────────────────
+redis>=5.0.1
+rq>=1.16.1
+
+# ── LLM / AI ───────────────────────────────────────────────────────────────────
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-openai>=0.0.2
+langgraph>=0.0.20
+
+# ── File Processing ────────────────────────────────────────────────────────────
+PyMuPDF>=1.25.0              # PDF text extraction
+python-docx>=1.0.0            # DOCX text extraction
+beautifulsoup4>=4.12.0        # HTML parsing (online sources)
+
+# ── HTTP Client ────────────────────────────────────────────────────────────────
+httpx>=0.25.2
+
+# ── Template & Misc ────────────────────────────────────────────────────────────
+jinja2>=3.1.2

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: medagent
+  labels:
+    app.kubernetes.io/name: medagent
+    app.kubernetes.io/component: redis
+    app.kubernetes.io/part-of: medagent
+spec:
+  type: ClusterIP
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    app.kubernetes.io/component: redis

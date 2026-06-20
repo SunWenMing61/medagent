@@ -1,0 +1,34 @@
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+.venv/
+
+# Node
+node_modules/
+
+# Zip archives
+*.zip
+
+# Test artifacts
+test_stream.txt
+
+# Uploads (runtime)
+uploads/
+
+# Docker
+.docker/
