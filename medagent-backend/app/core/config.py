@@ -10,10 +10,10 @@ class Settings(BaseSettings):
     PORT: int = 8000
 
     # Database - PostgreSQL (vector search)
-    DATABASE_URL: str = "postgresql://medagent:medagent123@localhost:5432/medagent"
+    DATABASE_URL: str = "postgresql://medagent:${POSTGRES_PASSWORD}@localhost:5432/medagent"
 
     # Database - MySQL (relational data)
-    MYSQL_DATABASE_URL: str = "mysql+pymysql://medagent:medagent123@localhost:3306/medagent"
+    MYSQL_DATABASE_URL: str = "mysql+pymysql://medagent:${MYSQL_PASSWORD}@localhost:3306/medagent"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

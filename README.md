@@ -254,8 +254,8 @@ npm start
 | `EMBEDDING_API_KEY` | Embedding API 密钥 | — |
 | `EMBEDDING_API_BASE` | Embedding API 地址 | `https://api.openai.com/v1` |
 | `EMBEDDING_MODEL` | Embedding 模型名 | `text-embedding-3-small` |
-| `DATABASE_URL` | PostgreSQL 连接串（向量存储） | `postgresql://medagent:medagent123@localhost:5432/medagent` |
-| `MYSQL_DATABASE_URL` | MySQL 连接串（业务数据） | `mysql+pymysql://medagent:medagent123@localhost:3306/medagent` |
+| `DATABASE_URL` | PostgreSQL 连接串（向量存储） | `postgresql://medagent:your-password@localhost:5432/medagent` |
+| `MYSQL_DATABASE_URL` | MySQL 连接串（业务数据） | `mysql+pymysql://medagent:your-password@localhost:3306/medagent` |
 | `REDIS_URL` | Redis 连接串 | `redis://localhost:6379/0` |
 | `SECRET_KEY` | JWT 签名密钥（请务必修改） | `change-this-to-a-secure-random-key` |
 | `TOP_K` | 向量检索返回条数 | `5` |
@@ -367,10 +367,8 @@ kubectl apply -f .
 
 ## 默认管理员账号
 
-| 字段 | 值 |
-|------|-----|
 | 用户名 | `admin` |
-| 密码 | `admin123` |
+| 密码 | （初始化时设置，请咨询管理员） |
 
 > ⚠️ 生产环境请务必修改默认密码。
 

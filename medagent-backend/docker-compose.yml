@@ -6,8 +6,8 @@ services:
     environment:
       MYSQL_DATABASE: medagent
       MYSQL_USER: medagent
-      MYSQL_PASSWORD: medagent123
-      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-medagent123}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
     ports:
       - "3306:3306"
     volumes:
@@ -24,7 +24,7 @@ services:
     environment:
       POSTGRES_DB: medagent
       POSTGRES_USER: medagent
-      POSTGRES_PASSWORD: medagent123
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medagent123}
     ports:
       - "5432:5432"
     volumes:
@@ -56,8 +56,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://medagent:medagent123@postgres:5432/medagent
-      MYSQL_DATABASE_URL: mysql+pymysql://medagent:medagent123@mysql:3306/medagent
+      DATABASE_URL: postgresql://medagent:${POSTGRES_PASSWORD:-medagent123}@postgres:5432/medagent
+      MYSQL_DATABASE_URL: mysql+pymysql://medagent:${MYSQL_PASSWORD:-medagent123}@mysql:3306/medagent
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
       LLM_API_KEY: ${LLM_API_KEY:-}
@@ -86,8 +86,8 @@ services:
       dockerfile: Dockerfile
     command: python worker.py
     environment:
-      DATABASE_URL: postgresql://medagent:medagent123@postgres:5432/medagent
-      MYSQL_DATABASE_URL: mysql+pymysql://medagent:medagent123@mysql:3306/medagent
+      DATABASE_URL: postgresql://medagent:${POSTGRES_PASSWORD:-medagent123}@postgres:5432/medagent
+      MYSQL_DATABASE_URL: mysql+pymysql://medagent:${MYSQL_PASSWORD:-medagent123}@mysql:3306/medagent
       REDIS_URL: redis://redis:6379/0
       SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
       LLM_API_KEY: ${LLM_API_KEY:-}

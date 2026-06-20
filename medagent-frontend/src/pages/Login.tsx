@@ -55,7 +55,7 @@ const Login: React.FC = () => {
   const fillAdminCredentials = () => {
     form.setFieldsValue({
       username: 'admin',
-      password: 'admin123',
+      password: '', // 请从管理员处获取密码
     });
   };
 
@@ -147,7 +147,7 @@ const Login: React.FC = () => {
             管理员快速登录
           </Button>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            默认管理员: admin / admin123
+            默认管理员: admin （密码请向管理员获取）
           </Text>
         </Space>
       </Card>
