@@ -30,7 +30,10 @@ spec:
             - name: POSTGRES_USER
               value: "medagent"
             - name: POSTGRES_PASSWORD
-              value: "medagent123"
+              valueFrom:
+                secretKeyRef:
+                  name: medagent-secrets
+                  key: postgres_password
             - name: POSTGRES_DB
               value: "medagent"
           resources:

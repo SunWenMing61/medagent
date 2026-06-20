@@ -71,7 +71,7 @@ kubectl apply -f k8s/
 ## 默认管理员账号
 
 - 用户名: admin
-- 密码: admin123
+- 密码: (初始化时通过环境变量 DEFAULT_ADMIN_PASSWORD 设置，默认 admin123)
 
 ## 项目结构
 

@@ -14,7 +14,7 @@ Write-Host "Step 2: Creating user 'medagent'..." -ForegroundColor Yellow
 # (default is usually empty or 'postgres')
 
 Write-Host "Step 3: Setting password..." -ForegroundColor Yellow
-& "$pgBin\psql.exe" -U postgres -h 127.0.0.1 -c "ALTER USER medagent WITH PASSWORD 'medagent123';"
+& "$pgBin\psql.exe" -U postgres -h 127.0.0.1 -c "ALTER USER medagent WITH PASSWORD 'your-password-here';"
 
 Write-Host "Step 4: Creating database..." -ForegroundColor Yellow
 & "$pgBin\createdb.exe" -U postgres -h 127.0.0.1 -O medagent medagent

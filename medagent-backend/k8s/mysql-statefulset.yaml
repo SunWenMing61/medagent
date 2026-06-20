@@ -32,9 +32,15 @@ spec:
             - name: MYSQL_USER
               value: "medagent"
             - name: MYSQL_PASSWORD
-              value: "medagent123"
+              valueFrom:
+                secretKeyRef:
+                  name: medagent-secrets
+                  key: mysql_password
             - name: MYSQL_ROOT_PASSWORD
-              value: "root123"
+              valueFrom:
+                secretKeyRef:
+                  name: medagent-secrets
+                  key: mysql_root_password
           resources:
             requests:
               cpu: "500m"

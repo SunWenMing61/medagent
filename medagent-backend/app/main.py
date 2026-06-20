@@ -49,7 +49,7 @@ def _init_default_data():
         if not admin:
             admin = User(
                 username="admin",
-                password_hash=hash_password("admin123"),
+                password_hash=hash_password(os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")),
                 email="admin@medagent.com",
                 role="admin",
                 status=1,
