@@ -1,65 +1,119 @@
+# apiVersion: 指定 Kubernetes API 版本。apps/v1 是工作负载资源的稳定 API 版本。
 apiVersion: apps/v1
+# kind: 资源类型。StatefulSet 用于管理有状态应用，为每个 Pod 提供稳定的网络标识和持久化存储。
 kind: StatefulSet
+# metadata: 资源的元数据信息。
 metadata:
+  # name: StatefulSet 的名称。
   name: postgres
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为 PostgreSQL 数据库。
     app.kubernetes.io/component: postgres
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: StatefulSet 的规格定义。
 spec:
+  # serviceName: 关联的 Headless Service 名称，提供稳定的 DNS 解析。
   serviceName: postgres
+  # replicas: Pod 副本数量。单节点 PostgreSQL 部署。
   replicas: 1
+  # selector: 标签选择器，确定管理的 Pod。
   selector:
+    # matchLabels: 选择包含指定标签的 Pod。
     matchLabels:
       app.kubernetes.io/component: postgres
+  # template: Pod 模板。
   template:
+    # metadata: Pod 的元数据。
     metadata:
+      # labels: 赋予 Pod 的标签，必须与 selector 匹配。
       labels:
         app.kubernetes.io/name: medagent
         app.kubernetes.io/component: postgres
         app.kubernetes.io/part-of: medagent
+    # spec: Pod 的规格定义。
     spec:
+      # containers: 容器列表。
       containers:
+        # - name: 容器名称。
         - name: postgres
+          # image: 使用 pgvector/pgvector:pg16 镜像。这是 PostgreSQL 16 的扩展版本，
+          # 预装了 pgvector 插件，支持向量数据的存储和相似度搜索，用于知识库的语义检索。
           image: pgvector/pgvector:pg16
+          # ports: 容器端口列表。
           ports:
+            # - containerPort: PostgreSQL 默认监听端口 5432。
             - containerPort: 5432
+              # protocol: 使用 TCP 协议。
               protocol: TCP
+          # env: 环境变量配置。
           env:
+            # POSTGRES_USER: PostgreSQL 数据库超级用户/普通用户名。
             - name: POSTGRES_USER
               value: "medagent"
+            # POSTGRES_PASSWORD: 数据库用户密码，从 Secret 中获取。
             - name: POSTGRES_PASSWORD
+              # valueFrom: 从外部来源获取值。
               valueFrom:
+                # secretKeyRef: 引用 Secret 中的键值。
                 secretKeyRef:
+                  # name: Secret 名称。
                   name: medagent-secrets
+                  # key: Secret 中 postgres_password 对应的值。
                   key: postgres_password
+            # POSTGRES_DB: 容器启动时自动创建的默认数据库名称。
             - name: POSTGRES_DB
               value: "medagent"
+          # resources: 容器的资源请求和限制。
           resources:
+            # requests: 保证分配的最小资源量。
             requests:
+              # cpu: 请求 500 毫核（0.5 个 CPU 核心）。
               cpu: "500m"
+              # memory: 请求 512 MiB 内存。
               memory: "512Mi"
+            # limits: 资源使用上限。
             limits:
+              # cpu: CPU 上限为 2 个核心。
               cpu: "2"
+              # memory: 内存上限为 2 GiB。
               memory: "2Gi"
+          # volumeMounts: 容器内部挂载卷配置。
           volumeMounts:
+            # - name: 卷名称，对应 volumeClaimTemplates 中的名称。
             - name: postgres-data
+              # mountPath: PostgreSQL 数据文件的默认存储路径。
               mountPath: /var/lib/postgresql/data
+              # subPath: 使用子路径 pgdata，将数据存储在卷的 pgdata 目录下，
+              # 避免与卷中其他文件冲突，也方便数据管理。
               subPath: pgdata
+          # livenessProbe: 存活探针，检测 PostgreSQL 进程是否正常运行。
           livenessProbe:
+            # exec: 执行容器内命令进行检测。
             exec:
+              # command: 使用 pg_isready 工具检查 PostgreSQL 是否接受连接。
               command:
                 - pg_isready
-                - -U
+                - -U          # 指定用户名
                 - medagent
-                - -d
+                - -d          # 指定数据库名
                 - medagent
+            # initialDelaySeconds: 启动后等待 30 秒开始探测。
             initialDelaySeconds: 30
+            # periodSeconds: 每 10 秒探测一次。
             periodSeconds: 10
+            # timeoutSeconds: 探测超时 5 秒。
             timeoutSeconds: 5
+            # failureThreshold: 连续 5 次失败后重启容器。
             failureThreshold: 5
+          # readinessProbe: 就绪探针，检测 PostgreSQL 是否准备好接受客户端连接。
           readinessProbe:
+            # exec: 执行 pg_isready 命令。
             exec:
               command:
                 - pg_isready
@@ -67,21 +121,35 @@ spec:
                 - medagent
                 - -d
                 - medagent
+            # initialDelaySeconds: 启动后延迟 10 秒开始探测。
             initialDelaySeconds: 10
+            # periodSeconds: 每 5 秒探测一次。
             periodSeconds: 5
+            # timeoutSeconds: 超时时间 3 秒。
             timeoutSeconds: 3
+            # failureThreshold: 连续 3 次失败认为未就绪。
             failureThreshold: 3
+  # volumeClaimTemplates: 卷声明模板。StatefulSet 会为每个 Pod 自动创建对应的 PVC，
+  # 确保 Pod 重启或重新调度后数据持久化。
   volumeClaimTemplates:
+    # - metadata: PVC 元数据模板。
     - metadata:
+        # name: PVC 名称，与 volumeMounts 的 name 对应。
         name: postgres-data
+        # labels: PVC 标签。
         labels:
           app.kubernetes.io/name: medagent
           app.kubernetes.io/component: postgres
           app.kubernetes.io/part-of: medagent
+      # spec: PVC 规格模板。
       spec:
+        # accessModes: 单个节点读写。
         accessModes:
           - ReadWriteOnce
+        # resources: 存储资源请求。
         resources:
+          # requests: 请求 10 GiB 存储空间。
           requests:
             storage: 10Gi
+        # storageClassName: 使用 "standard" StorageClass。
         storageClassName: standard

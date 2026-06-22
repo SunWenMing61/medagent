@@ -1,34 +1,34 @@
-# Logs
-*.log
+# ===== 日志文件 =====
+*.log                   # 所有日志文件
 
-# OS files
-.DS_Store
-Thumbs.db
+# ===== 操作系统文件 =====
+.DS_Store               # macOS 资源索引文件（桌面服务存储的目录自定义属性）
+Thumbs.db               # Windows 缩略图缓存文件
 
-# IDE
-.idea/
-*.iml
+# ===== IDE 编辑器配置 =====
+.idea/                  # JetBrains 系列 IDE（PyCharm/GoLand/IntelliJ）项目配置目录
+*.iml                   # IntelliJ IDEA 模块文件
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.env
-venv/
-.venv/
+# ===== Python 编译与缓存 =====
+__pycache__/            # Python 字节码缓存目录（Python 3 自动生成）
+*.py[cod]               # 编译后的 Python 文件（.pyc / .pyo / .pyd）
+*$py.class              # Jython 编译的 class 文件
+*.so                    # C/C++ 扩展编译的共享对象库
+.env                    # 环境变量文件（包含数据库密码、API 密钥等敏感信息）
+venv/                   # Python 虚拟环境目录（标准命名）
+.venv/                  # Python 虚拟环境目录（常见备选命名）
 
-# Node
-node_modules/
+# ===== Node.js =====
+node_modules/           # npm 安装的 Node.js 依赖包目录
 
-# Zip archives
-*.zip
+# ===== 压缩文件 =====
+*.zip                   # zip 压缩包（避免误提交打包的测试数据或构建产物）
 
-# Test artifacts
-test_stream.txt
+# ===== 测试产物 =====
+test_stream.txt         # 测试过程中生成的文件（用于流式输出测试）
 
-# Uploads (runtime)
-uploads/
+# ===== 运行时上传文件 =====
+uploads/                # 应用运行中用户上传的文件目录（运行时动态数据）
 
-# Docker
-.docker/
+# ===== Docker =====
+.docker/                # Docker 构建上下文缓存目录

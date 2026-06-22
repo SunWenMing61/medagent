@@ -1,7 +1,14 @@
-node_modules/
-build/
-.env
-*.log
-.DS_Store
-.idea/
-.vscode/
+# ===== Node.js 依赖 =====
+node_modules/           # npm 安装的第三方依赖包目录（体积大，由 package.json 重新安装）
+build/                  # React 构建产物目录（由 npm run build 生成，每次都可重新构建）
+
+# ===== 环境变量 =====
+.env                    # 环境变量配置文件（可能包含 API 密钥等敏感信息）
+
+# ===== 日志文件 =====
+*.log                   # 所有日志文件
+
+# ===== 操作系统文件 =====
+.DS_Store               # macOS 资源索引文件
+.idea/                  # JetBrains IDE（WebStorm）项目配置目录
+.vscode/                # Visual Studio Code 配置目录

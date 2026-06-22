@@ -1,27 +1,50 @@
 <!DOCTYPE html>
+<!-- 声明文档类型为 HTML5 -->
 <html lang="zh-CN">
+<!-- 设置页面语言为简体中文 -->
   <head>
+    <!-- 文档头部，包含元数据和资源引用 -->
+
     <meta charset="utf-8" />
+    <!-- 设置字符编码为 UTF-8，支持中文字符 -->
+
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <!-- 引用网站图标（favicon），%PUBLIC_URL% 在构建时替换为 public 目录的绝对路径 -->
+
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- 视口设置：宽度等于设备宽度，初始缩放比例为 1，确保移动端正确渲染 -->
+
     <meta name="theme-color" content="#1677ff" />
+    <!-- 浏览器主题色：设置地址栏颜色为 Ant Design 主色蓝色，提升 PWA 体验 -->
+
     <meta name="description" content="MedAgent - 医学知识库问答平台" />
+    <!-- 页面描述：供搜索引擎和社交媒体抓取时展示 -->
+
     <title>MedAgent - 医学知识库问答平台</title>
+    <!-- 浏览器标签页标题，同时也是搜索引擎结果标题 -->
+
     <style>
+      /* 全局基础样式：确保根元素和 body 占满全屏，无内外边距 */
       html, body, #root {
-        height: 100%;
-        margin: 0;
-        padding: 0;
+        height: 100%;     /* 高度占满整个视口 */
+        margin: 0;        /* 清除默认外边距 */
+        padding: 0;       /* 清除默认内边距 */
       }
       body {
+        /* 字体栈：优先使用系统原生字体，提高渲染性能和一致性 */
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
+        -webkit-font-smoothing: antialiased;   /* macOS 上字体抗锯齿优化 */
+        -moz-osx-font-smoothing: grayscale;    /* Firefox macOS 上字体灰度抗锯齿 */
       }
     </style>
   </head>
   <body>
+    <!-- 页面主体内容 -->
+
     <noscript>请启用 JavaScript 以运行此应用。</noscript>
+    <!-- 当用户浏览器禁用 JavaScript 时显示此提示信息，因为 React 应用依赖 JS 运行 -->
+
     <div id="root"></div>
+    <!-- React 应用的挂载根节点，所有组件最终渲染到这个 div 中 -->
   </body>
 </html>

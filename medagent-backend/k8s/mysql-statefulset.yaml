@@ -1,89 +1,158 @@
+# apiVersion: 指定 Kubernetes API 版本。apps/v1 是工作负载资源的稳定 API 版本。
 apiVersion: apps/v1
+# kind: 资源类型。StatefulSet 用于管理有状态应用（如数据库），
+# 与 Deployment 不同，它为每个 Pod 提供稳定的网络标识和持久化存储。
 kind: StatefulSet
+# metadata: 资源的元数据信息。
 metadata:
+  # name: StatefulSet 的名称。
   name: mysql
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为 MySQL 数据库。
     app.kubernetes.io/component: mysql
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: StatefulSet 的规格定义。
 spec:
+  # serviceName: 关联的 Headless Service 名称。StatefulSet 需要绑定一个 Headless Service，
+  # 使得每个 Pod 具有稳定的 DNS 名称（如 mysql-0.mysql.medagent.svc.cluster.local）。
   serviceName: mysql
+  # replicas: 期望运行的 Pod 副本数量。这里设置为 1，单节点 MySQL。
   replicas: 1
+  # selector: 标签选择器，确定哪些 Pod 归此 StatefulSet 管理。
   selector:
+    # matchLabels: 选择包含指定标签的 Pod。
     matchLabels:
       app.kubernetes.io/component: mysql
+  # template: Pod 模板。
   template:
+    # metadata: Pod 的元数据。
     metadata:
+      # labels: 赋予 Pod 的标签，必须与 selector 匹配。
       labels:
         app.kubernetes.io/name: medagent
         app.kubernetes.io/component: mysql
         app.kubernetes.io/part-of: medagent
+    # spec: Pod 的规格定义。
     spec:
+      # containers: Pod 中运行的容器列表。
       containers:
+        # - name: 容器的名称。
         - name: mysql
+          # image: 容器所使用的 Docker 镜像。使用 MySQL 8.0 官方镜像。
           image: mysql:8.0
+          # ports: 容器需要暴露的端口列表。
           ports:
+            # - containerPort: MySQL 默认监听端口 3306。
             - containerPort: 3306
+              # protocol: 使用 TCP 协议，MySQL 协议基于 TCP。
               protocol: TCP
+          # env: 容器的环境变量配置。
           env:
+            # MYSQL_DATABASE: 容器启动时自动创建的数据库名称。
             - name: MYSQL_DATABASE
               value: "medagent"
+            # MYSQL_USER: 创建的普通用户名称（非 root）。
             - name: MYSQL_USER
               value: "medagent"
+            # MYSQL_PASSWORD: 普通用户的密码，从 Secret 中安全获取。
             - name: MYSQL_PASSWORD
+              # valueFrom: 从外部来源获取值。
               valueFrom:
+                # secretKeyRef: 引用 Secret 中的某个键。
                 secretKeyRef:
+                  # name: Secret 名称。
                   name: medagent-secrets
+                  # key: Secret 中的键名，对应 mysql_password。
                   key: mysql_password
+            # MYSQL_ROOT_PASSWORD: MySQL root 超级管理员密码，从 Secret 获取。
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: medagent-secrets
                   key: mysql_root_password
+          # resources: 容器的资源请求和限制。
           resources:
+            # requests: 保证分配的最小资源量。
             requests:
+              # cpu: 请求 500 毫核（0.5 个 CPU 核心）。
               cpu: "500m"
+              # memory: 请求 512 MiB 内存。
               memory: "512Mi"
+            # limits: 最多可使用的资源上限。
             limits:
+              # cpu: CPU 上限为 2 个核心。
               cpu: "2"
+              # memory: 内存上限为 2 GiB。
               memory: "2Gi"
+          # volumeMounts: 容器内部挂载卷配置。
           volumeMounts:
+            # - name: 卷名称，对应 volumeClaimTemplates 中的名称。
             - name: mysql-data
+              # mountPath: MySQL 数据文件的默认存储路径。所有数据库文件将写到此目录。
               mountPath: /var/lib/mysql
+          # livenessProbe: 存活探针，检测 MySQL 是否正常运行。
           livenessProbe:
+            # exec: 通过在容器内执行命令进行探测。
             exec:
+              # command: 使用 mysqladmin ping 命令检查 MySQL 是否响应。
               command:
                 - mysqladmin
                 - ping
                 - -h
                 - localhost
+            # initialDelaySeconds: 容器启动后等待 30 秒开始探测，给 MySQL 足够的启动时间。
             initialDelaySeconds: 30
+            # periodSeconds: 每 10 秒探测一次。
             periodSeconds: 10
+            # timeoutSeconds: 探测超时时间 5 秒。
             timeoutSeconds: 5
+            # failureThreshold: 连续 5 次失败后重启容器。
             failureThreshold: 5
+          # readinessProbe: 就绪探针，检测 MySQL 是否准备好接受连接。
           readinessProbe:
+            # exec: 执行 mysqladmin ping 命令。
             exec:
               command:
                 - mysqladmin
                 - ping
                 - -h
                 - localhost
+            # initialDelaySeconds: 启动后延迟 10 秒开始探测。
             initialDelaySeconds: 10
+            # periodSeconds: 每 5 秒探测一次。
             periodSeconds: 5
+            # timeoutSeconds: 超时时间 3 秒。
             timeoutSeconds: 3
+            # failureThreshold: 连续 3 次失败认为未就绪。
             failureThreshold: 3
+  # volumeClaimTemplates: 卷声明模板，StatefulSet 特有功能。
+  # 当 StatefulSet 创建 Pod 时，会自动为每个 Pod 创建一个对应的 PVC。
+  # 这样即使 Pod 被重新调度到其他节点，数据也不会丢失。
   volumeClaimTemplates:
+    # - metadata: PVC 的元数据模板。
     - metadata:
+        # name: PVC 的名称，与 volumeMounts 中的 name 对应。
         name: mysql-data
+        # labels: PVC 的标签。
         labels:
           app.kubernetes.io/name: medagent
           app.kubernetes.io/component: mysql
           app.kubernetes.io/part-of: medagent
+      # spec: PVC 规格模板。
       spec:
+        # accessModes: 访问模式，单个节点读写。
         accessModes:
           - ReadWriteOnce
+        # resources: 存储资源请求。
         resources:
+          # requests: 请求 10 GiB 存储空间。
           requests:
             storage: 10Gi
+        # storageClassName: 使用 "standard" StorageClass 动态制备 PV。
         storageClassName: standard

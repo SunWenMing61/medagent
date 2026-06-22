@@ -1,32 +1,71 @@
+# apiVersion: 指定 Kubernetes API 版本。networking.k8s.io/v1 是 Ingress 资源的稳定 API 版本。
 apiVersion: networking.k8s.io/v1
+# kind: 资源类型。Ingress 定义了集群外部访问内部服务的 HTTP/HTTPS 路由规则，
+# 通常由 Ingress Controller（如 Nginx Ingress Controller）实现负载均衡、SSL 终止和虚拟主机路由。
 kind: Ingress
+# metadata: 资源的元数据信息。
 metadata:
+  # name: Ingress 资源的名称。
   name: medagent-ingress
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+  # annotations: 注解，为 Ingress Controller 提供额外的配置指令。
   annotations:
+    # nginx.ingress.kubernetes.io/rewrite-target: 重写目标路径。
+    # 设置为 / 表示将所有请求路径重写为根路径再转发给后端服务。
+    # 例如，对 /api/users 的请求，在转发到后端前路径会被重写。
     nginx.ingress.kubernetes.io/rewrite-target: /
+    # nginx.ingress.kubernetes.io/proxy-read-timeout: 代理读取超时时间。
+    # 设置 120 秒的超时时间，适用于长时间运行的 API 请求（如 AI 模型调用）。
     nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    # nginx.ingress.kubernetes.io/proxy-body-size: 代理请求体大小限制。
+    # 设置为 50m（50 MB），允许上传较大的文档文件（如 PDF、Word 文件）。
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+# spec: Ingress 的规格定义。
 spec:
+  # ingressClassName: 指定 Ingress Controller 的类名。
+  # 集群中可能有多个 Ingress Controller，此字段选择使用哪一个。
+  # 这里使用 nginx 作为 Ingress Controller。
   ingressClassName: nginx
+  # rules: HTTP 路由规则列表，定义域名和路径的转发规则。
   rules:
+    # - host: 虚拟主机域名。匹配此域名的 HTTP 请求将应用以下规则。
     - host: medagent.local
+      # http: HTTP 规则定义。
       http:
+        # paths: URL 路径匹配规则列表。每个规则包含路径前缀和后端服务的对应关系。
         paths:
+          # - path: 匹配的 URL 路径。这里匹配所有以 / 开头的请求。
           - path: /
+            # pathType: 路径匹配类型。Prefix 表示前缀匹配，即所有以此路径开头的 URL 都匹配。
             pathType: Prefix
+            # backend: 请求转发到的后端服务配置。
             backend:
+              # service: 目标 Service 的详细信息。
               service:
+                # name: 目标 Service 的名称，对应 frontend Service。
                 name: frontend
+                # port: 目标 Service 的端口。
                 port:
+                  # number: Service 端口号，80 对应前端 HTTP 服务。
                   number: 80
+          # - path: 匹配 /api 前缀的请求路径，路由到后端 API 服务。
           - path: /api
+            # pathType: 前缀匹配。
             pathType: Prefix
+            # backend: 后端服务配置。
             backend:
+              # service: 目标 Service。
               service:
+                # name: 后端 Service 名称。
                 name: backend
+                # port: 后端服务端口号。
                 port:
+                  # number: 8000 对应 FastAPI 后端服务端口。
                   number: 8000

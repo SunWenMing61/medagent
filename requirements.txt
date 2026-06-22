@@ -1,51 +1,51 @@
 # =============================================================================
-# MedAgent — Python Dependencies
+# MedAgent — Python 依赖清单（根目录汇总版）
 # =============================================================================
-# Install:  pip install -r requirements.txt
-# Python:   3.11+
+# 安装命令：pip install -r requirements.txt
+# Python 版本要求：3.11 及以上
 # =============================================================================
 
-# ── Web Framework ──────────────────────────────────────────────────────────────
-fastapi>=0.104.1
-uvicorn[standard]>=0.24.0
-pydantic>=2.7.0
-pydantic-settings>=2.2.0
-python-multipart>=0.0.6
-aiofiles>=23.2.1
+# ── Web 框架 ──────────────────────────────────────────────────────────────────
+fastapi>=0.104.1                 # FastAPI 高性能 Web 框架，支持异步请求处理和自动 API 文档生成
+uvicorn[standard]>=0.24.0        # ASGI 服务器，用于运行 FastAPI 应用（含超时和日志等标准功能）
+pydantic>=2.7.0                  # 数据验证和设置管理库，定义请求/响应模型的类型约束
+pydantic-settings>=2.2.0         # Pydantic 的扩展，支持从环境变量/.env 文件加载应用配置
+python-multipart>=0.0.6          # 处理 multipart/form-data 表单数据（文件上传必需）
+aiofiles>=23.2.1                 # 异步文件操作库，用于异步读写上传文件
 
-# ── Database ───────────────────────────────────────────────────────────────────
-# PostgreSQL + pgvector (vector search for document chunks)
-psycopg2-binary>=2.9.10
-pgvector>=0.2.4
-# MySQL / MariaDB (relational data: users, KBs, docs, sessions, feedback)
-pymysql>=1.1.0
-# ORM & migrations
-sqlalchemy>=2.0.23
-alembic>=1.13.0
+# ── 数据库 ─────────────────────────────────────────────────────────────────────
+# PostgreSQL + pgvector（存储文档向量嵌入，支持向量相似性搜索）
+psycopg2-binary>=2.9.10          # PostgreSQL 数据库驱动（二进制版，免编译安装）
+pgvector>=0.2.4                  # pgvector 的 Python 客户端库，支持向量类型和近似最近邻搜索
+# MySQL / MariaDB（存储关系型数据：用户、知识库、文档、会话记录、反馈）
+pymysql>=1.1.0                   # MySQL 数据库驱动（纯 Python 实现）
+# ORM 和数据库迁移
+sqlalchemy>=2.0.23               # SQLAlchemy ORM，提供数据库表映射和查询构建器
+alembic>=1.13.0                  # 数据库迁移工具，与 SQLAlchemy 配合管理 Schema 版本变更
 
-# ── Auth ───────────────────────────────────────────────────────────────────────
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.1
-cryptography>=41.0.0
+# ── 身份认证 ────────────────────────────────────────────────────────────────────
+python-jose[cryptography]>=3.3.0 # JWT 令牌生成和验证库（含加密支持）
+passlib[bcrypt]>=1.7.4           # 密码哈希库，支持多种哈希算法（bcrypt）
+bcrypt>=4.0.1                    # bcrypt 密码哈希算法实现
+cryptography>=41.0.0             # 加密库，提供对称/非对称加密、哈希等底层加密操作
 
-# ── Cache & Queue ──────────────────────────────────────────────────────────────
-redis>=5.0.1
-rq>=1.16.1
+# ── 缓存和任务队列 ──────────────────────────────────────────────────────────────
+redis>=5.0.1                     # Redis 数据库 Python 客户端（用于缓存和会话存储）
+rq>=1.16.1                       # RQ（Redis Queue）轻量级任务队列，在后台异步处理任务
 
-# ── LLM / AI ───────────────────────────────────────────────────────────────────
-langchain>=0.1.0
-langchain-community>=0.0.10
-langchain-openai>=0.0.2
-langgraph>=0.0.20
+# ── 大语言模型 / AI ─────────────────────────────────────────────────────────────
+langchain>=0.1.0                 # LangChain 框架，构建 LLM 应用的编排工具（链、代理、检索）
+langchain-community>=0.0.10      # LangChain 社区集成包（第三方模型和工具的适配器）
+langchain-openai>=0.0.2          # LangChain 的 OpenAI API 集成（调用 GPT/嵌入模型）
+langgraph>=0.0.20                # LangGraph，构建有状态多步骤 LLM 工作流（Agent 状态图）
 
-# ── File Processing ────────────────────────────────────────────────────────────
-PyMuPDF>=1.25.0              # PDF text extraction
-python-docx>=1.0.0            # DOCX text extraction
-beautifulsoup4>=4.12.0        # HTML parsing (online sources)
+# ── 文件处理 ────────────────────────────────────────────────────────────────────
+PyMuPDF>=1.25.0                  # PDF 文本提取库（fitz），用于解析上传的 PDF 医学文档
+python-docx>=1.0.0               # Word 文档（.docx）读写库，解析上传的 Word 文档
+beautifulsoup4>=4.12.0           # HTML 解析库，用于抓取和解析网页内容（联网搜索模式）
 
-# ── HTTP Client ────────────────────────────────────────────────────────────────
-httpx>=0.25.2
+# ── HTTP 客户端 ─────────────────────────────────────────────────────────────────
+httpx>=0.25.2                    # 异步 HTTP 客户端，用于调用外部 API（LLM、嵌入服务、网页搜索）
 
-# ── Template & Misc ────────────────────────────────────────────────────────────
-jinja2>=3.1.2
+# ── 模板引擎与杂项 ──────────────────────────────────────────────────────────────
+jinja2>=3.1.2                    # Jinja2 模板引擎，用于生成动态 HTML 或格式化文本

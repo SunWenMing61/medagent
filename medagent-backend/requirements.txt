@@ -1,26 +1,50 @@
-fastapi>=0.104.1
-uvicorn>=0.24.0
-pydantic>=2.7.0
-pydantic-settings>=2.2.0
-sqlalchemy>=2.0.23
-alembic>=1.13.0
-psycopg2-binary>=2.9.10
-pymysql>=1.1.0
-cryptography>=41.0.0
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.1
-python-multipart>=0.0.6
-httpx>=0.25.2
-redis>=5.0.1
-rq>=1.16.1
-langchain>=0.1.0
-langchain-community>=0.0.10
-langchain-openai>=0.0.2
-langgraph>=0.0.20
-pgvector>=0.2.4
-PyMuPDF>=1.25.0
-python-docx>=1.0.0
-aiofiles>=23.2.1
-jinja2>=3.1.2
-beautifulsoup4>=4.12.0
+# =============================================================================
+# MedAgent 后端 Python 依赖清单
+# 安装命令：pip install -r requirements.txt
+# =============================================================================
+
+# ── Web 框架 ──────────────────────────────────────────────────────────────────
+fastapi>=0.104.1                 # FastAPI 高性能 Web 框架，支持异步请求处理和自动 API 文档（Swagger UI）
+uvicorn>=0.24.0                  # ASGI 服务器，用于运行 FastAPI 应用
+pydantic>=2.7.0                  # 数据验证库，定义 API 请求和响应的数据模型与类型约束
+pydantic-settings>=2.2.0         # 从环境变量和 .env 文件加载应用设置
+
+# ── 数据库 ORM ─────────────────────────────────────────────────────────────────
+sqlalchemy>=2.0.23               # SQLAlchemy ORM（对象关系映射），用于数据库表操作和查询
+alembic>=1.13.0                  # 数据库迁移工具，与 SQLAlchemy 配合管理数据库 Schema 版本
+
+# ── 数据库驱动 ──────────────────────────────────────────────────────────────────
+psycopg2-binary>=2.9.10          # PostgreSQL 数据库驱动（pgvector 向量搜索需要）
+pymysql>=1.1.0                   # MySQL 数据库驱动（纯 Python 实现）
+
+# ── 安全与加密 ──────────────────────────────────────────────────────────────────
+cryptography>=41.0.0             # 加密库，提供哈希、签名等底层加密功能
+python-jose[cryptography]>=3.3.0 # JWT 令牌的生成与验证（JSON Web Token）
+passlib[bcrypt]>=1.7.4           # 密码哈希库，安全存储用户密码
+bcrypt>=4.0.1                    # bcrypt 密码哈希算法
+
+# ── 文件上传 ────────────────────────────────────────────────────────────────────
+python-multipart>=0.0.6          # 处理 multipart/form-data 请求（文件上传必需）
+
+# ── HTTP 客户端 ─────────────────────────────────────────────────────────────────
+httpx>=0.25.2                    # 异步 HTTP 客户端，用于调用外部 API 服务（LLM、嵌入、搜索等）
+
+# ── 缓存与任务队列 ──────────────────────────────────────────────────────────────
+redis>=5.0.1                     # Redis 数据库 Python 客户端，用于缓存和会话管理
+rq>=1.16.1                       # RQ 轻量级异步任务队列，处理后端异步任务
+
+# ── LLM / AI 框架 ──────────────────────────────────────────────────────────────
+langchain>=0.1.0                 # LangChain 框架，构建 LLM 应用的链式调用和工具集成
+langchain-community>=0.0.10      # LangChain 社区集成包（第三方模型适配器）
+langchain-openai>=0.0.2          # LangChain OpenAI 集成（GPT 模型调用和嵌入生成）
+langgraph>=0.0.20                # LangGraph，构建有状态 LLM Agent 工作流图
+
+# ── 向量数据库 ──────────────────────────────────────────────────────────────────
+pgvector>=0.2.4                  # pgvector Python 绑定，用于 PostgreSQL 中的向量存储和相似性搜索
+
+# ── 文档解析 ────────────────────────────────────────────────────────────────────
+PyMuPDF>=1.25.0                  # PDF 文本提取（fitz 库），解析医学文档 PDF
+python-docx>=1.0.0               # Word 文档 .docx 文件解析
+aiofiles>=23.2.1                 # 异步文件操作，用于高效处理文件读写
+jinja2>=3.1.2                    # Jinja2 模板引擎，用于动态文本生成和格式化
+beautifulsoup4>=4.12.0           # HTML 解析库，抓取和处理网页内容（联网搜索时使用）

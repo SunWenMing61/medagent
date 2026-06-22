@@ -1,18 +1,39 @@
+# apiVersion: 指定 Kubernetes API 版本。v1 是核心 API 的稳定版本。
 apiVersion: v1
+# kind: 资源类型。ConfigMap 用于存储非敏感配置数据，以键值对形式保存，
+# 可以被 Pod 通过环境变量、命令行参数或挂载文件的方式使用。
 kind: ConfigMap
+# metadata: 资源的元数据信息。
 metadata:
+  # name: ConfigMap 的名称，在命名空间内唯一。Pod 通过此名称引用该 ConfigMap。
   name: medagent-config
+  # namespace: 指定所属的命名空间，与此 ConfigMap 被引用的资源应在同一命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择器匹配。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 遵循 Kubernetes 推荐标签规范，标记所属系统。
     app.kubernetes.io/part-of: medagent
+# data: 存放配置数据的键值对。值以纯文本形式存储（非 Base64 编码），
+# 可通过 envFrom 或 volumeMount 注入到容器中。
 data:
-  # Sensitive values should be overridden via environment variables or K8s Secrets
+  # 注意：敏感值应通过环境变量覆盖或使用 K8s Secrets 管理，而非直接写在 ConfigMap 中。
+  # DATABASE_URL: PostgreSQL 数据库连接字符串。${POSTGRES_PASSWORD} 由 Secret 中的 postgres_password 注入。
+  # 格式: postgresql://用户名:密码@主机名:端口/数据库名
   DATABASE_URL: "postgresql://medagent:${POSTGRES_PASSWORD}@postgres:5432/medagent"
+  # MYSQL_DATABASE_URL: MySQL 数据库连接字符串，使用 pymysql 驱动。${MYSQL_PASSWORD} 由 Secret 注入。
+  # 格式: mysql+pymysql://用户名:密码@主机名:端口/数据库名
   MYSQL_DATABASE_URL: "mysql+pymysql://medagent:${MYSQL_PASSWORD}@mysql:3306/medagent"
+  # REDIS_URL: Redis 缓存服务连接地址。格式: redis://主机名:端口/数据库编号（0 为默认库）。
   REDIS_URL: "redis://redis:6379/0"
+  # LLM_MODEL: 指定使用的大语言模型名称。此处使用 OpenAI GPT-4o-mini，是 GPT-4o 的精简版，更快更经济。
   LLM_MODEL: "gpt-4o-mini"
+  # EMBEDDING_MODEL: 指定使用的文本嵌入（Embedding）模型名称。用于将文本转换为向量，进行语义搜索。
   EMBEDDING_MODEL: "text-embedding-3-small"
+  # TOP_K: 知识库检索时返回的最相似文档数量。即从向量数据库中召回前 K 个最相关的结果。
   TOP_K: "5"
+  # SIMILARITY_THRESHOLD: 知识库检索的相似度阈值（0~1）。只有相似度得分高于此阈值的文档才会被返回。
   SIMILARITY_THRESHOLD: "0.5"
+  # UPLOAD_DIR: 用户上传文件在容器内的存储路径。该路径应挂载持久卷（PVC）以防止容器重启后数据丢失。
   UPLOAD_DIR: "/app/uploads"

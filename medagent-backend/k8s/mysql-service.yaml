@@ -1,18 +1,37 @@
+# apiVersion: 指定 Kubernetes API 版本。v1 是核心 API 的稳定版本。
 apiVersion: v1
+# kind: 资源类型。Service 为 Pod 提供稳定的网络访问端点。
 kind: Service
+# metadata: 资源的元数据信息。
 metadata:
+  # name: Service 的名称。其他服务通过此名称（如 mysql:3306）访问 MySQL。
   name: mysql
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为 MySQL 数据库。
     app.kubernetes.io/component: mysql
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: Service 的规格定义。
 spec:
+  # type: Service 类型。ClusterIP 表示仅在集群内部可访问。
+  # 数据库通常不直接对外暴露，而是由内部应用通过集群网络访问。
   type: ClusterIP
+  # ports: Service 暴露的端口列表。
   ports:
+    # - name: 端口名称。
     - name: mysql
+      # port: Service 对外暴露的端口号。
       port: 3306
+      # targetPort: 转发到目标 Pod 的端口号，对应 MySQL 容器监听的 3306。
       targetPort: 3306
+      # protocol: 网络协议，MySQL 使用 TCP 协议通信。
       protocol: TCP
+  # selector: 标签选择器，确定流量转发到哪些 Pod。
   selector:
+    # 选择所有 app.kubernetes.io/component 为 mysql 的 Pod。
     app.kubernetes.io/component: mysql

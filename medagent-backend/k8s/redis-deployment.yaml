@@ -1,48 +1,93 @@
+# apiVersion: 指定 Kubernetes API 版本。apps/v1 是工作负载资源的稳定 API 版本。
 apiVersion: apps/v1
+# kind: 资源类型。Deployment 用于声明式地管理无状态应用的 Pod 副本集。
 kind: Deployment
+# metadata: 资源的元数据信息。
 metadata:
+  # name: Deployment 的名称。
   name: redis
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为 Redis 缓存。
     app.kubernetes.io/component: redis
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: Deployment 的规格定义。
 spec:
+  # replicas: Pod 副本数量。单节点 Redis 缓存。
   replicas: 1
+  # selector: 标签选择器，确定管理的 Pod。
   selector:
+    # matchLabels: 选择包含指定标签的 Pod。
     matchLabels:
+      # 选择 app.kubernetes.io/component 为 redis 的 Pod。
       app.kubernetes.io/component: redis
+  # template: Pod 模板。
   template:
+    # metadata: Pod 的元数据。
     metadata:
+      # labels: 赋予 Pod 的标签，必须与 selector 匹配。
       labels:
         app.kubernetes.io/name: medagent
         app.kubernetes.io/component: redis
         app.kubernetes.io/part-of: medagent
+    # spec: Pod 的规格定义。
     spec:
+      # containers: 容器列表。
       containers:
+        # - name: 容器名称。
         - name: redis
+          # image: 使用 Redis 7 基于 Alpine Linux 的精简镜像，体积小且安全。
           image: redis:7-alpine
+          # ports: 容器端口列表。
           ports:
+            # - containerPort: Redis 默认监听端口 6379。
             - containerPort: 6379
+              # protocol: Redis 使用 TCP 协议通信。
               protocol: TCP
+          # resources: 容器的资源请求和限制。
           resources:
+            # requests: 保证分配的最小资源量。
             requests:
+              # cpu: 请求 100 毫核（0.1 个 CPU 核心）。
               cpu: "100m"
+              # memory: 请求 128 MiB 内存。
               memory: "128Mi"
+            # limits: 资源使用上限。
             limits:
+              # cpu: CPU 上限为 500 毫核（0.5 个 CPU 核心）。
               cpu: "500m"
+              # memory: 内存上限为 256 MiB。
               memory: "256Mi"
+          # livenessProbe: 存活探针，检测 Redis 进程是否正常运行。
           livenessProbe:
+            # tcpSocket: 通过尝试建立 TCP 连接来检测端口是否开放。
             tcpSocket:
+              # port: 检测 Redis 的 6379 端口。
               port: 6379
+            # initialDelaySeconds: 启动后延迟 15 秒开始探测。
             initialDelaySeconds: 15
+            # periodSeconds: 每 10 秒探测一次。
             periodSeconds: 10
+            # timeoutSeconds: 连接超时时间 3 秒。
             timeoutSeconds: 3
+            # failureThreshold: 连续 5 次失败后认为容器不健康，触发重启。
             failureThreshold: 5
+          # readinessProbe: 就绪探针，检测 Redis 是否准备好接受客户端连接。
           readinessProbe:
+            # tcpSocket: 通过 TCP 连接检测端口。
             tcpSocket:
+              # port: 检测 Redis 端口 6379。
               port: 6379
+            # initialDelaySeconds: 启动后延迟 5 秒开始探测。
             initialDelaySeconds: 5
+            # periodSeconds: 每 5 秒探测一次。
             periodSeconds: 5
+            # timeoutSeconds: 超时时间 2 秒。
             timeoutSeconds: 2
+            # failureThreshold: 连续 3 次失败认为未就绪。
             failureThreshold: 3

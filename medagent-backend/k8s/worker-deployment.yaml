@@ -1,48 +1,94 @@
+# apiVersion: 指定 Kubernetes API 版本。apps/v1 是工作负载资源的稳定 API 版本。
 apiVersion: apps/v1
+# kind: 资源类型。Deployment 用于声明式地管理 Pod 副本集。
 kind: Deployment
+# metadata: 资源的元数据信息。
 metadata:
+  # name: Deployment 的名称，在命名空间内唯一。
   name: worker
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为后台工作进程。
     app.kubernetes.io/component: worker
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: Deployment 的规格定义。
 spec:
+  # replicas: 期望运行的 Pod 副本数量。后台工作进程设置为 1，避免重复处理任务。
   replicas: 1
+  # selector: 标签选择器，确定哪些 Pod 归此 Deployment 管理。
   selector:
+    # matchLabels: 选择包含指定标签的 Pod。
     matchLabels:
+      # 选择 app.kubernetes.io/component 为 worker 的 Pod。
       app.kubernetes.io/component: worker
+  # template: Pod 模板。
   template:
+    # metadata: Pod 的元数据。
     metadata:
+      # labels: 赋予 Pod 的标签，必须与 selector 匹配。
       labels:
         app.kubernetes.io/name: medagent
         app.kubernetes.io/component: worker
         app.kubernetes.io/part-of: medagent
+    # spec: Pod 的规格定义。
     spec:
+      # containers: Pod 中运行的容器列表。
       containers:
+        # - name: 容器的名称。
         - name: worker
+          # image: 容器所使用的 Docker 镜像。与后端使用相同的镜像，因为 worker 代码在同一项目中。
           image: medagent-backend:latest
+          # imagePullPolicy: 镜像拉取策略。IfNotPresent: 仅在本地不存在时拉取。
           imagePullPolicy: IfNotPresent
+          # command: 覆盖 Docker 镜像的默认启动命令。
+          # 使用 Python 运行 worker.py，这是一个后台任务处理脚本（如文档解析、向量化处理等）。
           command: ["python", "worker.py"]
+          # envFrom: 批量注入环境变量。
           envFrom:
+            # configMapRef: 引用 ConfigMap 中的所有键值对作为环境变量。
             - configMapRef:
+                # name: ConfigMap 的名称。
                 name: medagent-config
+            # secretRef: 引用 Secret 中的所有键值对作为环境变量。
             - secretRef:
+                # name: Secret 的名称。
                 name: medagent-secrets
+          # env: 单独定义的环境变量。
           env:
+            # - name: 环境变量名称。
             - name: PYTHONUNBUFFERED
+              # value: 设置为 1，禁用 Python 输出缓冲，确保日志实时输出。
               value: "1"
+          # resources: 容器的资源请求和限制。
           resources:
+            # requests: 保证分配的最小资源量。
             requests:
+              # cpu: 请求 250 毫核（0.25 个 CPU 核心）。
               cpu: "250m"
+              # memory: 请求 512 MiB 内存。
               memory: "512Mi"
+            # limits: 最多可使用的资源上限。
             limits:
+              # cpu: CPU 上限为 1 个完整核心。
               cpu: "1"
+              # memory: 内存上限为 1 GiB。
               memory: "1Gi"
+          # volumeMounts: 容器内部挂载卷的配置。
           volumeMounts:
+            # - name: 卷名称，必须与 volumes 中的名称一致。
             - name: uploads
+              # mountPath: 挂载路径，worker 需要访问上传的文件进行处理（如文档解析）。
               mountPath: /app/uploads
+      # volumes: Pod 级别的卷定义。
       volumes:
+        # - name: 卷名称，供 volumeMounts 引用。
         - name: uploads
+          # persistentVolumeClaim: 引用 PVC 作为持久化存储。
           persistentVolumeClaim:
+            # claimName: 对应 pvc.yaml 中定义的 uploads-data。
             claimName: uploads-data

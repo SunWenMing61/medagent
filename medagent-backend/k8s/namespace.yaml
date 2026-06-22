@@ -1,9 +1,18 @@
+# apiVersion: 指定 Kubernetes API 的版本。v1 是 Kubernetes 核心 API 的稳定版本。
 apiVersion: v1
+# kind: 资源类型。Namespace 用于创建独立的资源隔离空间，将同一集群内的资源逻辑隔离。
 kind: Namespace
+# metadata: 资源的元数据，包含名称、标签、注解等标识信息。
 metadata:
+  # name: Namespace 的名称，在同一集群内必须唯一。这里命名为 medagent，所有 MedAgent 资源都将归属此命名空间。
   name: medagent
+  # labels: 键值对标签，用于资源的分类、筛选和选择器匹配。
   labels:
+    # 自定义标签，标记该 Namespace 的名称。
     name: medagent
+    # 自定义标签，标识此环境为生产环境。
     environment: production
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 遵循 Kubernetes 推荐标签规范，标记应用所属的整体系统。
     app.kubernetes.io/part-of: medagent

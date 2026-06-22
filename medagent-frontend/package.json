@@ -1,41 +1,70 @@
 {
+  "_comment_project": "MedAgent 前端项目配置文件（npm 包描述与依赖管理）",
   "name": "medagent-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "MedAgent - Medical Knowledge Base Q&A Platform",
+  "description": "MedAgent - Medical Knowledge Base Q&A Platform（医疗知识库问答平台）",
+
+  "_comment_dependencies": "生产环境依赖——运行时必需的第三方库",
   "dependencies": {
     "@ant-design/icons": "^5.2.6",
+    "_comment_antd": "Ant Design 图标库，提供 UI 图标组件",
     "antd": "^5.12.0",
+    "_comment_antd2": "Ant Design 组件库，企业级 React UI 组件集",
     "axios": "^1.6.0",
+    "_comment_axios": "基于 Promise 的 HTTP 客户端，用于调用后端 API",
     "react": "^18.2.0",
+    "_comment_react": "React 核心库，用于构建用户界面",
     "react-dom": "^18.2.0",
+    "_comment_react_dom": "React DOM 渲染器，将 React 组件渲染到浏览器 DOM",
     "react-markdown": "^9.0.1",
+    "_comment_react_md": "React Markdown 渲染组件，用于显示 LLM 返回的 Markdown 格式回答",
     "react-router-dom": "^6.20.0",
+    "_comment_router": "React 路由库，管理前端页面导航和 URL 路由",
     "react-scripts": "5.0.1",
+    "_comment_scripts": "Create React App 的构建脚本和配置（开发服务器、构建、测试）",
     "rehype-highlight": "^7.0.0",
+    "_comment_highlight": "rehype 插件，为 Markdown 中的代码块提供语法高亮",
     "rehype-raw": "^7.0.0",
+    "_comment_rehype_raw": "rehype 插件，允许在 Markdown 中嵌入原始 HTML",
     "remark-gfm": "^4.0.0",
+    "_comment_gfm": "remark 插件，支持 GitHub Flavored Markdown（表格、任务列表等扩展语法）",
     "typescript": "^4.9.5"
   },
+  "_comment_dev_dependencies": "开发环境依赖——仅在开发和构建时使用",
   "devDependencies": {
     "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.3.5"
+    "_comment_types_react": "React 的 TypeScript 类型声明",
+    "@types/react-dom": "^18.3.5",
+    "_comment_types_react_dom": "ReactDOM 的 TypeScript 类型声明"
   },
+
+  "_comment_scripts": "可执行的 npm 脚本命令",
   "scripts": {
     "start": "react-scripts start",
+    "_comment_start": "启动开发服务器（默认端口 3000，支持热更新）",
     "build": "react-scripts build",
+    "_comment_build": "构建生产版本（输出到 build/ 目录，包含代码压缩和优化）",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "_comment_test": "运行测试（使用 Jest 测试框架）",
+    "eject": "react-scripts eject",
+    "_comment_eject": "弹出 CRA 配置（将隐藏的 webpack 配置暴露出来，不可逆操作）"
   },
+
+  "_comment_browserslist": "目标浏览器兼容性配置（影响 Babel 转译和 Autoprefixer 的 CSS 前缀）",
   "browserslist": {
     "production": [
       ">0.2%",
+      "_comment_prod_1": "覆盖全球使用率超过 0.2% 的浏览器",
       "not dead",
+      "_comment_prod_2": "排除已停止维护的浏览器（如 IE 11）",
       "not op_mini all"
     ],
     "development": [
       "last 1 chrome version",
+      "_comment_dev_1": "仅保留最新版 Chrome（开发环境快速启动）",
       "last 1 firefox version",
+      "_comment_dev_2": "仅保留最新版 Firefox",
       "last 1 safari version"
     ]
   }

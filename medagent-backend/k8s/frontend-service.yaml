@@ -1,18 +1,38 @@
+# apiVersion: 指定 Kubernetes API 版本。v1 是核心 API 的稳定版本。
 apiVersion: v1
+# kind: 资源类型。Service 定义了一种访问 Pod 的逻辑抽象和策略，
+# 为一组具有相同标签的 Pod 提供稳定的网络端点和服务发现。
 kind: Service
+# metadata: 资源的元数据信息。
 metadata:
+  # name: Service 的名称。集群内其他服务（如 Ingress）可通过此名称访问该 Service。
   name: frontend
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为前端服务。
     app.kubernetes.io/component: frontend
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: Service 的规格定义。
 spec:
+  # type: Service 的类型。ClusterIP 表示该 Service 仅在集群内部可访问，
+  # 前端通常通过 Ingress 暴露给外部，内部 Service 使用 ClusterIP 即可。
   type: ClusterIP
+  # ports: Service 暴露的端口列表。
   ports:
+    # - name: 端口名称，增加可读性。
     - name: http
+      # port: Service 对外暴露的端口号，其他服务通过此端口访问。
       port: 80
+      # targetPort: 流量转发到的目标 Pod 端口，对应 Nginx 监听的 80 端口。
       targetPort: 80
+      # protocol: 端口使用的网络协议。
       protocol: TCP
+  # selector: 标签选择器，确定将流量转发到哪些 Pod。
   selector:
+    # 选择所有 app.kubernetes.io/component 为 frontend 的 Pod。
     app.kubernetes.io/component: frontend

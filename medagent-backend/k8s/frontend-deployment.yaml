@@ -1,51 +1,99 @@
+# apiVersion: 指定 Kubernetes API 版本。apps/v1 是工作负载资源的稳定 API 版本。
 apiVersion: apps/v1
+# kind: 资源类型。Deployment 用于声明式地管理 Pod 副本集，支持滚动更新、回滚、扩缩容等功能。
 kind: Deployment
+# metadata: 资源的元数据信息。
 metadata:
+  # name: Deployment 的名称，在命名空间内唯一。
   name: frontend
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为前端服务。
     app.kubernetes.io/component: frontend
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: Deployment 的规格定义，描述期望的运行状态。
 spec:
+  # replicas: 期望运行的 Pod 副本数量。设置为 2 以实现高可用和负载均衡。
   replicas: 2
+  # selector: 标签选择器，确定哪些 Pod 归此 Deployment 管理。
   selector:
+    # matchLabels: 选择包含指定标签的 Pod。
     matchLabels:
+      # 选择 app.kubernetes.io/component 为 frontend 的 Pod。
       app.kubernetes.io/component: frontend
+  # template: Pod 模板，描述要创建的 Pod 的规格。
   template:
+    # metadata: Pod 的元数据。
     metadata:
+      # labels: 赋予 Pod 的标签，必须与 selector 中的 matchLabels 匹配。
       labels:
         app.kubernetes.io/name: medagent
         app.kubernetes.io/component: frontend
         app.kubernetes.io/part-of: medagent
+    # spec: Pod 的规格定义。
     spec:
+      # containers: Pod 中运行的容器列表。
       containers:
+        # - name: 容器的名称。
         - name: frontend
+          # image: 容器所使用的 Docker 镜像名称及标签。前端通常使用 Nginx 或类似 Web 服务器提供静态文件服务。
           image: medagent-frontend:latest
+          # imagePullPolicy: 镜像拉取策略。IfNotPresent: 仅当本地不存在该镜像时才拉取。
           imagePullPolicy: IfNotPresent
+          # ports: 容器需要暴露的端口列表。
           ports:
+            # - containerPort: 容器内部监听的端口号。80 是 HTTP 默认端口，Nginx 默认监听此端口。
             - containerPort: 80
+              # protocol: 网络协议，使用 TCP。
               protocol: TCP
+          # resources: 容器的资源请求和限制。
           resources:
+            # requests: 容器启动时保证分配的最小资源量。
             requests:
+              # cpu: 请求 100 毫核（0.1 个 CPU 核心）。
               cpu: "100m"
+              # memory: 请求 128 MiB 内存。
               memory: "128Mi"
+            # limits: 容器最多可使用的资源上限。
             limits:
+              # cpu: CPU 上限为 200 毫核（0.2 个 CPU 核心）。
               cpu: "200m"
+              # memory: 内存上限为 256 MiB。
               memory: "256Mi"
+          # livenessProbe: 存活探针，检测容器是否正常运行。失败时 Kubelet 会重启容器。
           livenessProbe:
+            # httpGet: 发送 HTTP GET 请求进行检测。
             httpGet:
+              # path: 请求根路径 /，Nginx 默认提供此路径的响应。
               path: /
+              # port: 检测端口。
               port: 80
+            # initialDelaySeconds: 容器启动后延迟 10 秒开始首次探测。
             initialDelaySeconds: 10
+            # periodSeconds: 每 15 秒探测一次。
             periodSeconds: 15
+            # timeoutSeconds: 探测超时时间为 5 秒。
             timeoutSeconds: 5
+            # failureThreshold: 连续 5 次失败后认为容器不健康，触发重启。
             failureThreshold: 5
+          # readinessProbe: 就绪探针，检测容器是否准备好接收流量。失败时从 Service 端点中移除。
           readinessProbe:
+            # httpGet: 发送 HTTP GET 请求进行检测。
             httpGet:
+              # path: 请求根路径。
               path: /
+              # port: 检测端口。
               port: 80
+            # initialDelaySeconds: 启动后延迟 5 秒开始探测。
             initialDelaySeconds: 5
+            # periodSeconds: 每 10 秒探测一次。
             periodSeconds: 10
+            # timeoutSeconds: 探测超时时间 3 秒。
             timeoutSeconds: 3
+            # failureThreshold: 连续 3 次失败则认为 Pod 未就绪。
             failureThreshold: 3

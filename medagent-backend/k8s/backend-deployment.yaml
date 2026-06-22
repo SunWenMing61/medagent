@@ -1,66 +1,132 @@
+# apiVersion: 指定 Kubernetes API 版本。apps/v1 是工作负载资源（Deployment、StatefulSet 等）的稳定 API 版本。
 apiVersion: apps/v1
+# kind: 资源类型。Deployment 用于声明式地管理 Pod 副本集，支持滚动更新、回滚、扩缩容等功能。
 kind: Deployment
+# metadata: 资源的元数据信息。
 metadata:
+  # name: Deployment 的名称，在命名空间内唯一。
   name: backend
+  # namespace: 指定所属的命名空间。
   namespace: medagent
+  # labels: 资源的标签，用于分类和选择器匹配。
   labels:
+    # 遵循 Kubernetes 推荐标签规范，标记应用名称。
     app.kubernetes.io/name: medagent
+    # 标记该组件为后端服务。
     app.kubernetes.io/component: backend
+    # 标记所属系统。
     app.kubernetes.io/part-of: medagent
+# spec: Deployment 的规格定义，描述期望的运行状态。
 spec:
+  # replicas: 期望运行的 Pod 副本数量。设置为 2 以实现高可用和负载均衡。
   replicas: 2
+  # selector: 标签选择器，用于确定哪些 Pod 归此 Deployment 管理。
   selector:
+    # matchLabels: 选择包含指定标签的 Pod。
     matchLabels:
+      # 选择 app.kubernetes.io/component 为 backend 的 Pod。
       app.kubernetes.io/component: backend
+  # template: Pod 模板，描述要创建的 Pod 的规格。
   template:
+    # metadata: Pod 的元数据。
     metadata:
+      # labels: 赋予 Pod 的标签，必须与 selector 中的 matchLabels 匹配。
       labels:
         app.kubernetes.io/name: medagent
         app.kubernetes.io/component: backend
         app.kubernetes.io/part-of: medagent
+    # spec: Pod 的规格定义。
     spec:
+      # containers: Pod 中运行的容器列表。这里只定义了一个容器。
       containers:
+        # - name: 容器的名称，在 Pod 内必须唯一。
         - name: backend
+          # image: 容器所使用的 Docker 镜像名称及标签。
           image: medagent-backend:latest
+          # imagePullPolicy: 镜像拉取策略。
+          # IfNotPresent: 仅在本地不存在该镜像时才从仓库拉取。
           imagePullPolicy: IfNotPresent
+          # ports: 容器需要暴露的端口列表。
           ports:
+            # - containerPort: 容器内部监听的端口号。8000 是 FastAPI/Uvicorn 应用的默认端口。
             - containerPort: 8000
+              # protocol: 网络协议，默认为 TCP。
               protocol: TCP
+          # envFrom: 批量注入环境变量的来源。可以将 ConfigMap 或 Secret 中的所有键值对注入为环境变量。
           envFrom:
+            # configMapRef: 引用 ConfigMap 中的所有数据作为环境变量。
             - configMapRef:
+                # name: ConfigMap 的名称，对应 configmap.yaml 中定义的 medagent-config。
                 name: medagent-config
+            # secretRef: 引用 Secret 中的所有数据作为环境变量。
             - secretRef:
+                # name: Secret 的名称，对应 secret.yaml 中定义的 medagent-secrets。
                 name: medagent-secrets
+          # env: 单独定义的环境变量列表。用于设置 envFrom 无法覆盖或需要额外定义的变量。
           env:
+            # - name: 环境变量名称。
             - name: PYTHONUNBUFFERED
+              # value: 设置 Python 标准输出/错误不缓冲，确保日志可以实时输出而不是等到缓冲区满。
               value: "1"
+          # resources: 容器的资源请求和限制，用于 Kubernetes 调度和资源管理。
           resources:
+            # requests: 容器启动时保证分配的最小资源量，用于调度决策。
             requests:
+              # cpu: CPU 请求量。250m 表示 0.25 个 CPU 核心（250 毫核）。
               cpu: "250m"
+              # memory: 内存请求量。512Mi 表示 512 Mebibytes。
               memory: "512Mi"
+            # limits: 容器最多可以使用的资源上限，超过会被限制或终止。
             limits:
+              # cpu: CPU 上限为 1 个完整核心。
               cpu: "1"
+              # memory: 内存上限为 1 GiB。
               memory: "1Gi"
+          # volumeMounts: 容器内部挂载卷的配置。
           volumeMounts:
+            # - name: 引用的卷名称，必须与 spec.volumes 中定义的名称一致。
             - name: uploads
+              # mountPath: 卷在容器内的挂载路径。用户上传的文件将存储在此目录。
               mountPath: /app/uploads
+          # livenessProbe: 存活探针，用于检测容器是否处于正常运行状态。
+          # 如果探测失败，Kubelet 会根据重启策略重启容器。
           livenessProbe:
+            # httpGet: 通过发送 HTTP GET 请求进行探活检测。
             httpGet:
+              # path: 请求的 HTTP 路径。/health 是应用提供的健康检查接口。
               path: /health
+              # port: 请求的目标端口号。
               port: 8000
+            # initialDelaySeconds: 容器启动后延迟多少秒开始首次探测，给应用足够的启动时间。
             initialDelaySeconds: 15
+            # periodSeconds: 每隔多少秒执行一次探测。
             periodSeconds: 15
+            # timeoutSeconds: 探测超时时间（秒），超过此时间未响应视为失败。
             timeoutSeconds: 5
+            # failureThreshold: 连续失败多少次后认为容器不健康，会触发重启。
             failureThreshold: 5
+          # readinessProbe: 就绪探针，用于检测容器是否准备好接收流量。
+          # 如果探测失败，该 Pod 会从 Service 的端点列表中移除。
           readinessProbe:
+            # httpGet: 通过 HTTP GET 请求进行就绪检测。
             httpGet:
+              # path: 健康检查接口路径。
               path: /health
+              # port: 检测端口。
               port: 8000
+            # initialDelaySeconds: 启动后延迟 10 秒开始探测。
             initialDelaySeconds: 10
+            # periodSeconds: 每 10 秒探测一次。
             periodSeconds: 10
+            # timeoutSeconds: 探测超时时间 3 秒。
             timeoutSeconds: 3
+            # failureThreshold: 连续 3 次失败则认为 Pod 未就绪，停止接收流量。
             failureThreshold: 3
+      # volumes: Pod 级别的卷定义列表。容器通过 volumeMounts 引用这些卷。
       volumes:
+        # - name: 卷的名称，与容器中的 volumeMounts.name 对应。
         - name: uploads
+          # persistentVolumeClaim: 引用一个 PVC 作为存储后端。
           persistentVolumeClaim:
+            # claimName: PVC 的名称，对应 pvc.yaml 中定义的 uploads-data。
             claimName: uploads-data
