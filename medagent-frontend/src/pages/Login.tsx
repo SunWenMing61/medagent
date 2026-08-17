@@ -26,6 +26,17 @@ import { login } from '../services/api';
 // 从 Typography 中解构出 Title 和 Text 组件，用于展示标题和文本
 const { Title, Text } = Typography;
 
+// Local development convenience only. Vite excludes this block from production
+// behavior because import.meta.env.DEV is false in production builds. Values come
+// from the git-ignored .env.local file and are never hard-coded in source control.
+const devAdminUsername = import.meta.env.DEV
+  ? import.meta.env.VITE_DEV_ADMIN_USERNAME
+  : undefined;
+const devAdminPassword = import.meta.env.DEV
+  ? import.meta.env.VITE_DEV_ADMIN_PASSWORD
+  : undefined;
+const hasLocalDevCredentials = Boolean(devAdminUsername && devAdminPassword);
+
 // 定义 Login 组件，类型为 React.FC（函数式组件）
 const Login: React.FC = () => {
   // loading 状态：控制登录按钮的加载中动画，初始值为 false
@@ -79,8 +90,8 @@ const Login: React.FC = () => {
   const fillAdminCredentials = () => {
     // 使用表单实例的 setFieldsValue 方法设置表单字段值
     form.setFieldsValue({
-      username: 'admin', // 用户名固定填充为 admin
-      password: '', // 密码留空，提示用户从管理员处获取
+      username: devAdminUsername || 'admin',
+      password: devAdminPassword || '',
     });
   };
 
@@ -185,14 +196,25 @@ const Login: React.FC = () => {
           {/* 分割线：上下间距 12px */}
           <Divider style={{ margin: '12px 0' }} />
 
-          {/* 管理员快速登录按钮：link 类型，点击触发 fillAdminCredentials */}
-          <Button type="link" size="small" onClick={fillAdminCredentials}>
-            管理员快速登录
-          </Button>
-          {/* 管理员默认凭据提示：小号次要文本 */}
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            默认管理员: admin （密码请向管理员获取）
-          </Text>
+          {hasLocalDevCredentials ? (
+            <Space direction="vertical" size={4} style={{ width: '100%' }}>
+              <Text type="warning" strong>仅本机开发环境临时凭据</Text>
+              <Text>账号：<Text code copyable>{devAdminUsername}</Text></Text>
+              <Text>密码：<Text code copyable>{devAdminPassword}</Text></Text>
+              <Button type="link" size="small" onClick={fillAdminCredentials}>
+                填充管理员账号和密码
+              </Button>
+            </Space>
+          ) : (
+            <>
+              <Button type="link" size="small" onClick={fillAdminCredentials}>
+                管理员快速登录
+              </Button>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                管理员账号：admin（密码请向管理员获取）
+              </Text>
+            </>
+          )}
         </Space>
       </Card>
     </div>

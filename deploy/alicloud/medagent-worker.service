@@ -1,0 +1,22 @@
+[Unit]
+Description=MedAgent document processing worker
+After=network-online.target redis-server.service medagent-backend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=medagent
+Group=medagent
+WorkingDirectory=/opt/medagent/medagent-backend
+EnvironmentFile=/opt/medagent/medagent-backend/.env
+ExecStart=/opt/medagent/.venv/bin/python worker.py
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+TimeoutStopSec=60
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

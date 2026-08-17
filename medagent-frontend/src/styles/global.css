@@ -1,0 +1,204 @@
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --app-canvas: #f4f7fb;
+  --app-surface: rgba(255, 255, 255, 0.9);
+  --app-border: rgba(15, 23, 42, 0.08);
+  --app-shadow: 0 12px 36px rgba(30, 64, 175, 0.08);
+  --app-shadow-hover: 0 18px 44px rgba(30, 64, 175, 0.14);
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --app-canvas: #0b1120;
+  --app-surface: rgba(17, 24, 39, 0.88);
+  --app-border: rgba(148, 163, 184, 0.15);
+  --app-shadow: 0 14px 40px rgba(0, 0, 0, 0.24);
+  --app-shadow-hover: 0 20px 48px rgba(0, 0, 0, 0.32);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { min-height: 100%; margin: 0; }
+
+body {
+  min-width: 320px;
+  background:
+    radial-gradient(circle at 88% 4%, rgba(37, 99, 235, 0.10), transparent 28%),
+    radial-gradient(circle at 12% 92%, rgba(16, 185, 129, 0.07), transparent 25%),
+    var(--app-canvas);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgba(37, 99, 235, 0.2); }
+
+.app-shell { background: transparent; }
+
+.app-sider {
+  background: linear-gradient(180deg, #0f2f5f 0%, #0b1f3a 54%, #07162b 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 10px 0 35px rgba(2, 8, 23, 0.14);
+}
+
+.app-sider .ant-menu { background: transparent; padding: 8px; }
+
+.app-sider .ant-menu-item,
+.app-sider .ant-menu-submenu-title {
+  border-radius: 10px;
+  margin-block: 4px;
+}
+
+.app-sider .ant-menu-item-selected {
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+}
+
+.app-brand {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.app-header {
+  min-height: 64px;
+  border-bottom: 1px solid var(--app-border);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.app-user-trigger {
+  padding: 6px 10px 6px 6px;
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+
+.app-user-trigger:hover { background: rgba(37, 99, 235, 0.08); }
+
+.app-content {
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.page-shell { animation: page-enter 0.35s ease both; }
+
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-toolbar { padding: 2px 2px 4px; }
+
+.page-title-group { display: flex; align-items: center; gap: 14px; }
+
+.page-title-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #fff;
+  font-size: 22px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+}
+
+.page-title-group .ant-typography-secondary { display: block; margin-top: 3px; }
+
+.ant-card {
+  border-color: var(--app-border);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.035);
+}
+
+.ant-card-hoverable { transition: transform 0.22s ease, box-shadow 0.22s ease; }
+.ant-card-hoverable:hover { transform: translateY(-3px); box-shadow: var(--app-shadow-hover); }
+
+.metric-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 102px;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 4px;
+  background: #2563eb;
+}
+
+.metric-card::after {
+  content: '';
+  position: absolute;
+  width: 72px;
+  height: 72px;
+  right: -22px;
+  top: -24px;
+  border-radius: 50%;
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.metric-card:hover { transform: translateY(-2px); box-shadow: var(--app-shadow); }
+.metric-card-success::before { background: #10b981; }
+.metric-card-success::after { background: rgba(16, 185, 129, 0.10); }
+.metric-card-processing::before { background: #0ea5e9; }
+.metric-card-processing::after { background: rgba(14, 165, 233, 0.10); }
+.metric-card-error::before { background: #ef4444; }
+.metric-card-error::after { background: rgba(239, 68, 68, 0.09); }
+
+.metric-card .ant-card-body { padding: 18px 20px; }
+.metric-card .ant-statistic-title { font-size: 13px; margin-bottom: 6px; }
+.metric-card .ant-statistic-content { font-weight: 700; letter-spacing: -0.02em; }
+
+.document-upload-card { border-style: dashed; }
+.document-upload-card .ant-upload-drag {
+  border: 0;
+  border-radius: 14px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.document-upload-card .ant-upload-drag:hover { transform: translateY(-1px); }
+.document-upload-card .ant-upload-drag-icon { margin-bottom: 8px !important; }
+.document-upload-card .ant-upload-drag-icon .anticon { color: #2563eb !important; font-size: 42px; }
+
+.document-table-card { overflow: hidden; }
+.document-table-card > .ant-card-head { border-bottom-color: var(--app-border); }
+.document-table .ant-table-thead > tr > th {
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.document-table .ant-table-tbody > tr > td { transition: background 0.18s ease; }
+.document-table .ant-table-tbody > tr:hover > td { background: rgba(37, 99, 235, 0.035) !important; }
+.document-table .ant-progress-line { margin: 0; }
+
+.ant-btn-primary { box-shadow: 0 7px 18px rgba(37, 99, 235, 0.2); }
+.ant-btn-primary:hover { box-shadow: 0 9px 22px rgba(37, 99, 235, 0.28); }
+.ant-tag { border-radius: 999px; padding-inline: 9px; }
+.ant-modal-content { box-shadow: 0 30px 80px rgba(2, 8, 23, 0.24) !important; }
+
+@media (max-width: 992px) {
+  .app-content { margin: 12px !important; padding: 18px !important; }
+  .document-toolbar { align-items: flex-start !important; }
+  .page-toolbar-actions { width: 100%; }
+}
+
+@media (max-width: 576px) {
+  .app-content { margin: 8px !important; padding: 14px !important; border-radius: 14px !important; }
+  .page-title-icon { width: 40px; height: 40px; border-radius: 12px; }
+  .page-title-group h3 { font-size: 21px; }
+  .page-title-group .ant-typography-secondary { font-size: 12px; }
+  .page-toolbar-actions .ant-space-item:first-child { width: 100%; }
+  .page-toolbar-actions .ant-select { width: 100% !important; }
+  .metric-card { min-height: 92px; }
+  .metric-card .ant-card-body { padding: 15px 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

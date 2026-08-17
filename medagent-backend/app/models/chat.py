@@ -44,5 +44,8 @@ class ChatMessage(MySQLBase):
     references_json = Column(JSON, nullable=True)
     # 安全标记，用于标记是否触发了安全过滤规则，可为空
     safety_flag = Column(String(50), nullable=True)
+    answer_variants_json = Column(JSON, nullable=True)
+    recommended_variant_id = Column(String(64), nullable=True)
+    selected_variant_id = Column(String(64), nullable=True)
     # 创建时间，使用数据库的 now() 函数作为默认值
     created_at = Column(DateTime, server_default=func.now())

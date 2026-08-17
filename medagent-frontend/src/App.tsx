@@ -41,6 +41,9 @@ import {
   SunOutlined,
   MoonOutlined,
   PictureOutlined,
+  SyncOutlined,
+  ApartmentOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 // 引入自定义的主题上下文 Hook，用于获取和切换主题模式（light/dark/auto）及背景设置
 import { useThemeContext } from './contexts/ThemeContext';
@@ -61,7 +64,20 @@ import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminFeedback from './pages/AdminFeedback';
 import AdminConfig from './pages/AdminConfig';
-// SourceManagement 组件现已合并到 KBManagement 中，以两个标签页（Tab）的形式呈现，故不再单独引入
+import ToolMonitoring from './pages/ToolMonitoring';
+import MemoryManagement from './pages/MemoryManagement';
+import RetrievalDebug from './pages/RetrievalDebug';
+// 引入后台任务状态监控页面
+import TaskStatus from './pages/TaskStatus';
+import EvaluationDashboard from './pages/evaluation/EvaluationDashboard';
+import EvaluationRuns from './pages/evaluation/EvaluationRuns';
+import EvaluationRunDetail from './pages/evaluation/EvaluationRunDetail';
+import EvaluationCaseDetail from './pages/evaluation/EvaluationCaseDetail';
+import EvaluationCompare from './pages/evaluation/EvaluationCompare';
+import EvaluationDatasets from './pages/evaluation/EvaluationDatasets';
+import EvaluationCandidates from './pages/evaluation/EvaluationCandidates';
+import './styles/hybridEvaluation.css';
+import './styles/baselineEvaluation.css';
 
 // 从 Ant Design Layout 中解构出 Header（顶部导航栏）、Sider（侧边栏）、Content（主内容区）三个布局部件
 const { Header, Sider, Content } = Layout;
@@ -248,10 +264,37 @@ function AppLayout() {
         icon: <FileOutlined />,
         label: '文档管理',
       },
+      {
+        key: '/tasks',
+        icon: <SyncOutlined />,
+        label: '后台任务',
+      },
+      {
+        key: '/graph',
+        icon: <ApartmentOutlined />,
+        label: '知识图谱',
+      },
+      {
+        key: '/memory',
+        icon: <DatabaseOutlined />,
+        label: 'Agent Memory',
+      },
     ];
 
     // 如果当前用户是管理员，追加系统管理分组菜单
     if (currentUser?.role === 'admin') {
+      items.push({
+        key: 'evaluation-group',
+        icon: <ExperimentOutlined />,
+        label: 'AI 评测',
+        children: [
+          { key: '/evaluation', icon: <DashboardOutlined />, label: '评测 Dashboard' },
+          { key: '/evaluation/runs', icon: <SyncOutlined />, label: '评测运行' },
+          { key: '/evaluation/compare', icon: <ApartmentOutlined />, label: '版本对比' },
+          { key: '/evaluation/datasets', icon: <DatabaseOutlined />, label: 'Datasets' },
+          { key: '/evaluation/candidates', icon: <ExperimentOutlined />, label: 'Candidates' },
+        ],
+      });
       items.push({
         key: 'admin-group',
         icon: <SettingOutlined />,
@@ -277,6 +320,16 @@ function AppLayout() {
             icon: <ToolOutlined />,
             label: '系统配置',
           },
+          {
+            key: '/admin/tools',
+            icon: <SafetyCertificateOutlined />,
+            label: '工具治理',
+          },
+          {
+            key: '/admin/retrieval',
+            icon: <SyncOutlined />,
+            label: '检索调试',
+          },
         ],
       });
     }
@@ -292,11 +345,21 @@ function AppLayout() {
     const path = location.pathname;
     // 逐一匹配各管理页面路径，确保精确高亮
     if (path.startsWith('/admin/dashboard')) return '/admin/dashboard';
+    if (path.startsWith('/evaluation/compare')) return '/evaluation/compare';
+    if (path.startsWith('/evaluation/datasets')) return '/evaluation/datasets';
+    if (path.startsWith('/evaluation/candidates')) return '/evaluation/candidates';
+    if (path.startsWith('/evaluation/runs') || path.startsWith('/evaluation/cases')) return '/evaluation/runs';
+    if (path === '/evaluation') return '/evaluation';
     if (path.startsWith('/admin/users')) return '/admin/users';
     if (path.startsWith('/admin/feedback')) return '/admin/feedback';
     if (path.startsWith('/admin/config')) return '/admin/config';
+    if (path.startsWith('/admin/tools')) return '/admin/tools';
+    if (path.startsWith('/admin/retrieval')) return '/admin/retrieval';
     if (path.startsWith('/documents')) return '/documents';
-    return path;  // 默认返回当前路径，Ant Design Menu 会自动匹配
+    if (path.startsWith('/tasks')) return '/tasks';
+    if (path.startsWith('/graph')) return '/graph';
+    if (path.startsWith('/memory')) return '/memory';
+    return path;
   };
 
   /**
@@ -311,6 +374,7 @@ function AppLayout() {
     if (path.startsWith('/admin')) {
       return ['admin-group'];
     }
+    if (path.startsWith('/evaluation')) return ['evaluation-group'];
     return [];
   };
 
@@ -357,9 +421,10 @@ function AppLayout() {
         position: 'relative',  // 相对定位，作为子元素绝对定位的参考
         zIndex: 1,             // 位于背景图片之上
         background: 'transparent',  // 透明背景以露出背景图片
-      }}>
+      }} className="app-shell">
         {/* ===== 侧边栏 ===== */}
         <Sider
+          className="app-sider"
           trigger={null}              // 不使用默认的折叠触发器，由顶部按钮控制
           collapsible                 // 允许折叠
           collapsed={collapsed}       // 折叠状态由 state 控制
@@ -378,6 +443,7 @@ function AppLayout() {
         >
           {/* 侧边栏顶部品牌标识区域 */}
           <div
+            className="app-brand"
             style={{
               height: 64,
               display: 'flex',
@@ -423,6 +489,7 @@ function AppLayout() {
         }}>
           {/* ===== 顶部栏 ===== */}
           <Header
+            className="app-header"
             style={{
               padding: '0 24px',
               // 根据是否使用自定义背景及主题模式，设置不同的背景色
@@ -468,7 +535,7 @@ function AppLayout() {
               </Dropdown>
               {/* 用户信息下拉菜单 */}
               <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-                <Space style={{ cursor: 'pointer' }}>
+                <Space className="app-user-trigger" style={{ cursor: 'pointer' }}>
                   {/* 用户头像，背景色使用 Ant Design 主色 #1677ff */}
                   <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1677ff' }} />
                   {/* 显示用户名，未获取到时显示"用户" */}
@@ -480,6 +547,7 @@ function AppLayout() {
 
           {/* ===== 主内容区 ===== */}
           <Content
+            className="app-content"
             style={{
               margin: 16,
               padding: 24,
@@ -535,9 +603,17 @@ function App() {
           <Route path="/qa" element={<MedicalQA />} />
           <Route path="/health" element={<HealthConsult />} />
           <Route path="/kb" element={<KBManagement />} />
-          {/* /sources 为兼容旧路径，重定向到 /kb 并切换到在线来源标签页 */}
-          <Route path="/sources" element={<Navigate to="/kb?tab=online" replace />} />
           <Route path="/documents" element={<DocumentManagement />} />
+          <Route path="/tasks" element={<TaskStatus />} />
+          <Route path="/graph" element={<div style={{ padding: 40, textAlign: 'center' }}><Typography.Title level={4}>知识图谱</Typography.Title><Typography.Text type="secondary">正在建设中...</Typography.Text></div>} />
+          <Route path="/memory" element={<MemoryManagement />} />
+          <Route path="/evaluation" element={<AdminGuard><EvaluationDashboard /></AdminGuard>} />
+          <Route path="/evaluation/runs" element={<AdminGuard><EvaluationRuns /></AdminGuard>} />
+          <Route path="/evaluation/runs/:runId" element={<AdminGuard><EvaluationRunDetail /></AdminGuard>} />
+          <Route path="/evaluation/cases/:resultId" element={<AdminGuard><EvaluationCaseDetail /></AdminGuard>} />
+          <Route path="/evaluation/compare" element={<AdminGuard><EvaluationCompare /></AdminGuard>} />
+          <Route path="/evaluation/datasets" element={<AdminGuard><EvaluationDatasets /></AdminGuard>} />
+          <Route path="/evaluation/candidates" element={<AdminGuard><EvaluationCandidates /></AdminGuard>} />
           {/* 带知识库 ID 的文档管理路由，用于查看特定知识库的文档 */}
           <Route path="/documents/:kbId" element={<DocumentManagement />} />
           {/* 管理后台路由：额外受 AdminGuard 保护 */}
@@ -570,6 +646,22 @@ function App() {
             element={
               <AdminGuard>
                 <AdminConfig />
+              </AdminGuard>
+            }
+          />
+          <Route
+            path="/admin/tools"
+            element={
+              <AdminGuard>
+                <ToolMonitoring />
+              </AdminGuard>
+            }
+          />
+          <Route
+            path="/admin/retrieval"
+            element={
+              <AdminGuard>
+                <RetrievalDebug />
               </AdminGuard>
             }
           />

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "medagent.failure-regression-captured-run.v1",
+  "title": "MedAgent fixed-suite captured execution",
+  "type": "object",
+  "required": ["case_id", "status", "answer", "retrieved_evidence", "tool_calls"],
+  "properties": {
+    "case_id": {"type": "string", "minLength": 1},
+    "status": {"type": "string"},
+    "answer": {"type": "string"},
+    "retrieved_evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "content"],
+        "properties": {
+          "evidence_id": {"type": "string"},
+          "content": {"type": "string"},
+          "score": {"type": "number"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "citations": {"type": "array", "items": {"type": "string"}},
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["claim", "citation_ids"],
+        "properties": {
+          "claim": {"type": "string"},
+          "citation_ids": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "tool_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "arguments", "status"],
+        "properties": {
+          "name": {"type": "string"},
+          "arguments": {"type": "object"},
+          "status": {"type": "string"},
+          "error_code": {"type": ["string", "null"]}
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

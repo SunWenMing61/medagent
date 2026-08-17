@@ -1,0 +1,51 @@
+{
+  "audit_version": "agent-evaluation-audit-v2",
+  "metric_inventory_count": 61,
+  "metric_inventory_scope": "55 persisted EvalRun aggregates plus 6 independently recomputed live RAG metrics",
+  "source": "Raw Eval Case + Raw Ground Truth + Raw Agent Trace",
+  "status_vocabulary": ["VERIFIED", "INCORRECT", "AMBIGUOUS", "UNTESTED", "NOT_APPLICABLE"],
+  "verified_metrics": [
+    "Hit@5", "Precision@5", "Recall@5", "MRR", "nDCG@5", "MAP@5",
+    "Tool Selection Exact Match", "Tool Precision", "Tool Recall", "Tool F1",
+    "Tool Argument Accuracy", "Tool Success Rate", "Invalid Tool Call Rate",
+    "Execution Mode Accuracy", "Under-routing Rate", "Over-routing Rate",
+    "Agent Sequence Accuracy", "Safety Hard Gate", "Input Tokens", "Output Tokens",
+    "End-to-End Latency", "P50", "P95", "P99", "Pass Rate"
+  ],
+  "incorrect_metrics_fixed": [
+    {"metric":"Empty-label RAG metrics", "problem":"Empty Ground Truth could produce Recall/nDCG 100%", "fix":"Case is N/A and excluded from aggregation"},
+    {"metric":"Under-routing Rate", "problem":"Used all labeled cases and depended on overall pass", "fix":"Under-routed expected MULTI_AGENT / all expected MULTI_AGENT"},
+    {"metric":"Over-routing Rate", "problem":"Used all labeled cases", "fix":"MULTI_AGENT for expected DIRECT/REACT / all expected DIRECT/REACT"},
+    {"metric":"Tool Selection Accuracy", "problem":"Only expected-tool recall was exposed as accuracy", "fix":"Exact set match split from precision, recall and F1"},
+    {"metric":"Redundant Tool Call Rate", "problem":"Repeated tool name with different arguments was counted redundant", "fix":"Duplicate requires same tool and same arguments"},
+    {"metric":"Token Saving", "problem":"Compared unrelated execution modes inside one run", "fix":"Removed until same-case paired baseline exists"}
+  ],
+  "ambiguous_metrics": [
+    "Trajectory Efficiency (current definition is retry/loop penalty, evidence level C)",
+    "Answer Quality heuristic components (not an objective clinical-quality score)",
+    "Dataset Health composite score (components are partially proxy-defined)"
+  ],
+  "untested_metrics": [
+    "Cost Saving", "Latency Saving", "Judge Tokens", "Cached Token Cost",
+    "Production Coverage", "Freshness", "Dataset Authority Score"
+  ],
+  "rag_metrics": {
+    "dataset_version": "live-retrieval-v2-post-revectorization",
+    "sample_count": 12,
+    "averaging": "macro_by_query",
+    "k": 5,
+    "verification_status": "VERIFIED",
+    "evidence_level": "A",
+    "vector_off": {"hit_rate_at_5":0.5833333333333334,"precision_at_5":0.31666666666666665,"recall_at_5":0.4583333333333333,"mrr":0.5416666666666666,"ndcg_at_5":0.4597439328958506,"map_at_5":0.4166666666666667},
+    "vector_on": {"hit_rate_at_5":0.8333333333333334,"precision_at_5":0.3666666666666667,"recall_at_5":0.7083333333333334,"mrr":0.8333333333333334,"ndcg_at_5":0.7404997867648958,"map_at_5":0.7083333333333334}
+  },
+  "vector_index": {
+    "provider_health":"VERIFIED",
+    "model":"text-embedding-v3",
+    "dimensions":1024,
+    "chunker_version":"hybrid-structural-semantic-v3",
+    "documents":{"104":809,"106":872,"107":3040},
+    "invariant":"child_count == non_null_vector_count"
+  },
+  "latest_verified_metrics_policy":"Only evidence level A/B metrics may be treated as trusted dashboard values; N/A never maps to 100%."
+}

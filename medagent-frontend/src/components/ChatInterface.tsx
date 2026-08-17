@@ -2,31 +2,33 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 // 引入 Ant Design 组件：Input（输入框）、Button（按钮）、Select（下拉选择）、Card（卡片）、Typography（排版）、Space（间距）、Spin（加载）、Empty（空状态）、Alert（警告/提示）、Tag（标签）、Divider（分割线）、Modal（弹窗）、List（列表）、message（全局提示）、Tooltip（工具提示）、theme（设计令牌）、Switch（开关）
 import {
-  Input, Button, Select, Card, Typography, Space, Spin, Empty, Alert,
+  Input, Button, Select, Card, Typography, Space, Spin, Empty,
   Tag, Divider, Modal, List, message as antMessage, Tooltip, theme,
-  Switch,
 } from 'antd';
 // 引入 Ant Design 图标：Send（发送）、Robot（机器人）、User（用户）、Delete（删除）、History（历史）、Warning（警告）、Book（书籍）、Plus（添加）、Like/Dislike（点赞/点踩）、Link（链接）、PaperClip（附件）、CloseCircle（关闭）、File（文件）、Upload（上传）、Global（全球网络）、MenuFold/MenuUnfold（折叠/展开）、Message（消息）
 import {
   SendOutlined, RobotOutlined, UserOutlined, DeleteOutlined,
-  HistoryOutlined, WarningOutlined, BookOutlined, PlusOutlined,
+  HistoryOutlined, BookOutlined, PlusOutlined,
   LikeOutlined, DislikeOutlined, LinkOutlined,
-  PaperClipOutlined, CloseCircleOutlined, FileOutlined, UploadOutlined,
-  GlobalOutlined, MenuFoldOutlined, MenuUnfoldOutlined, MessageOutlined,
+  MenuFoldOutlined, MenuUnfoldOutlined, MessageOutlined,
+  SafetyCertificateOutlined, InfoCircleOutlined, CheckCircleFilled, GlobalOutlined,
 } from '@ant-design/icons';
 // 引入 ReactMarkdown 将 AI 返回的 Markdown 文本渲染为 HTML
 import ReactMarkdown from 'react-markdown';
 // 引入 remark-gfm 插件，支持 GFM（GitHub Flavored Markdown）扩展语法（表格、任务列表等）
 import remarkGfm from 'remark-gfm';
-// 引入 rehype-raw 插件，允许在 Markdown 中使用原始 HTML 标签
 import rehypeRaw from 'rehype-raw';
+// 引入 EnhancedMarkdown 增强版渲染器（支持 LaTeX、消息编辑、引用高亮）
+import EnhancedMarkdown from './EnhancedMarkdown';
+import './ChatInterface.css';
 // 引入自定义主题上下文 Hook，用于获取当前主题模式和背景设置
 import { useThemeContext } from '../contexts/ThemeContext';
 // 引入 API 服务中的函数和类型：获取知识库列表、获取会话列表/详情、删除会话、提交反馈、多部分问答
 import {
   getKnowledgeBases, getSessions, getSessionDetail, deleteSession, submitFeedback,
-  askQuestionMultipart,
+  getAssistantProfiles, submitAnswerPreference, getAnswerPreferenceProfile,
   type KnowledgeBase, type Session, type SessionDetail, type Message, type ChatResponse,
+  type AssistantProfile, type AnswerVariant, type AnswerPreferenceProfile,
 } from '../services/api';
 
 // 从 Input 中解构出 TextArea（多行文本输入框）
@@ -53,7 +55,7 @@ const { Text, Title, Paragraph } = Typography;
 export interface ChatInterfaceProps {
   title: string;
   subtitle?: string;
-  apiFunction: (params: { question: string; kb_ids: number[]; session_id?: string; web_search_enabled?: boolean; deep_thinking_enabled?: boolean }) => Promise<ChatResponse>;
+  apiFunction: (params: { question: string; kb_ids: number[]; session_id?: string; assistant_profile?: 'general_qa' | 'memory_qa' }) => Promise<ChatResponse>;
   kbTypeFilter?: string;
   showSafetyWarning?: boolean;
   autoBindKB?: boolean;
@@ -64,6 +66,7 @@ export interface ChatInterfaceProps {
   initialShowHistory?: boolean;
   autoLoadLastSession?: boolean;
   sessionType?: string;
+  defaultAssistantProfile?: 'general_qa' | 'memory_qa';
 }
 
 /**
@@ -87,10 +90,89 @@ interface ChatMessage {
   references?: any[];
   safety_flag?: boolean;
   disclaimer?: string;
+  cache_hit?: boolean;
+  cache_age_seconds?: number;
+  answerVariants?: AnswerVariant[];
+  recommendedVariantId?: string;
+  selectedVariantId?: string;
   messageId?: number;
   feedbackType?: string | null;
+  edited?: boolean;
   timestamp: Date;
 }
+
+interface AgentStageStatus {
+  key: string;
+  label: string;
+  detail?: string;
+  severity?: 'info' | 'warning' | 'error';
+}
+
+type AnswerSectionKey = 'main' | 'uncertainty' | 'limitations' | 'nextSteps' | 'disclaimer';
+
+interface ParsedAnswerContent {
+  main: string;
+  uncertainty: string;
+  limitations: string;
+  nextSteps: string;
+  disclaimer: string;
+}
+
+const ANSWER_SECTION_RULES: Array<{ key: Exclude<AnswerSectionKey, 'main'>; pattern: RegExp }> = [
+  { key: 'disclaimer', pattern: /^(?:#{1,6}\s*)?(?:医疗免责声明(?:\s*\/\s*Medical Disclaimer)?|Medical Disclaimer|免责声明)\s*[:：]?\s*/i },
+  { key: 'uncertainty', pattern: /^(?:#{1,6}\s*)?(?:不确定性|证据不确定性|不确定因素)\s*[:：]?\s*/i },
+  { key: 'limitations', pattern: /^(?:#{1,6}\s*)?(?:限制|局限性|证据局限)\s*[:：]?\s*/i },
+  { key: 'nextSteps', pattern: /^(?:#{1,6}\s*)?(?:下一步|建议|后续建议|建议行动)\s*[:：]\s*/i },
+];
+
+const MAIN_ANSWER_PREFIX = /^(?:#{1,6}\s*)?(?:精炼结论|核心结论|详细说明|回答摘要|结论)\s*[:：]\s*/i;
+
+/** 将模型文本里的辅助说明从核心答案中拆出，避免所有信息挤在同一排版层级。 */
+export const parseAnswerContent = (content: string): ParsedAnswerContent => {
+  const normalized = (content || '')
+    .replace(/([。；;])\s*((?:不确定性|限制|局限性|下一步|后续建议|医疗免责声明(?:\s*\/\s*Medical Disclaimer)?|免责声明)\s*[:：])/g, '$1\n\n$2')
+    .trim();
+  const sections: Record<AnswerSectionKey, string[]> = {
+    main: [], uncertainty: [], limitations: [], nextSteps: [], disclaimer: [],
+  };
+  let active: AnswerSectionKey = 'main';
+  normalized.split(/\r?\n/).forEach((originalLine, lineIndex) => {
+    const markerCandidate = originalLine.replace(/^\s*(?:[-*+]\s+)?/, '');
+    const matchedRule = ANSWER_SECTION_RULES.find((rule) => rule.pattern.test(markerCandidate));
+    if (matchedRule) {
+      active = matchedRule.key;
+      const remainder = markerCandidate.replace(matchedRule.pattern, '').trim();
+      if (remainder) sections[active].push(remainder);
+      return;
+    }
+    const line = lineIndex === 0 ? originalLine.replace(MAIN_ANSWER_PREFIX, '') : originalLine;
+    sections[active].push(line);
+  });
+  return {
+    main: sections.main.join('\n').trim() || normalized,
+    uncertainty: sections.uncertainty.join('\n').trim(),
+    limitations: sections.limitations.join('\n').trim(),
+    nextSteps: sections.nextSteps.join('\n').trim(),
+    disclaimer: sections.disclaimer.join('\n').trim(),
+  };
+};
+
+const AGENT_STAGE_LABELS: Record<string, string> = {
+  input_safety: '\u8f93\u5165\u5b89\u5168\u68c0\u67e5',
+  triage: '\u533b\u7597\u5206\u8bca',
+  clarification_required: '\u7b49\u5f85\u8865\u5145\u4fe1\u606f',
+  retrieval_planned: '\u5236\u5b9a\u68c0\u7d22\u8ba1\u5212',
+  retrieval_started: '\u6b63\u5728\u68c0\u7d22\u8bc1\u636e',
+  retrieval_completed: '\u68c0\u7d22\u5b8c\u6210',
+  evidence_verification: '\u6b63\u5728\u6838\u9a8c\u8bc1\u636e',
+  answer_generated: '\u5df2\u751f\u6210\u5f15\u7528\u7ed1\u5b9a\u8349\u7a3f',
+  safety_review: '\u6b63\u5728\u8f93\u51fa\u5b89\u5168\u5ba1\u67e5',
+  human_review_required: '\u7b49\u5f85\u4eba\u5de5\u5ba1\u6838',
+  done: '\u5904\u7406\u5b8c\u6210',
+  error: '\u5904\u7406\u5931\u8d25',
+  cache_hit: '\u9ad8\u9891\u6807\u51c6\u7b54\u6848\u7f13\u5b58\u547d\u4e2d',
+  answer_candidates_generated: '\u4e24\u4e2a Answer Agent \u5df2\u751f\u6210\u5019\u9009\u7248\u672c',
+};
 
 /**
  * ChatInterface 组件：智能问答对话界面的核心组件
@@ -111,7 +193,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   showSafetyWarning = false, autoBindKB = false, hideKBSelector = false,
   streamEndpoint, extraActions,
   initialSessionId, initialShowHistory, autoLoadLastSession = false,
-  sessionType,
+  sessionType, defaultAssistantProfile,
 }) => {
   // ===== 核心对话状态 =====
   const [messages, setMessages] = useState<ChatMessage[]>([]);                      // 当前会话的消息列表
@@ -127,11 +209,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [historyVisible, setHistoryVisible] = useState(false);                      // 历史会话弹窗可见性
   const [streamingContent, setStreamingContent] = useState('');                     // 流式输出中的 AI 回答文本
   const [streamingThinking, setStreamingThinking] = useState('');                   // 流式输出中的思考过程文本
-  const [webSearchEnabled, setWebSearchEnabled] = useState(false);                  // 联网搜索开关
-  const [deepThinkingEnabled, setDeepThinkingEnabled] = useState(false);            // 深度思考开关
+  const [agentStage, setAgentStage] = useState<AgentStageStatus | null>(null);
   const [allSessions, setAllSessions] = useState<Session[]>([]);                    // 所有会话（侧边栏用）
   const [sidebarLoading, setSidebarLoading] = useState(false);                      // 侧边栏会话列表加载中
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);                  // 侧边栏折叠状态
+  const [assistantProfiles, setAssistantProfiles] = useState<AssistantProfile[]>([]);
+  const [assistantProfile, setAssistantProfile] = useState<'general_qa' | 'memory_qa'>(defaultAssistantProfile ?? 'memory_qa');
+  const [answerPreference, setAnswerPreference] = useState<AnswerPreferenceProfile>();
   const { token } = theme.useToken();                                               // 获取 Ant Design 设计令牌（颜色、间距等）
   const { resolvedMode, activeBgDataUrl } = useThemeContext();                      // 获取主题模式和背景
   const isBgActive = !!activeBgDataUrl;                                             // 是否有自定义背景图片
@@ -139,87 +223,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const bgContainer = isBgActive ? 'transparent' : token.colorBgContainer;          // 容器背景色
   const bgLayout = isBgActive ? 'transparent' : token.colorBgLayout;                // 布局背景色
   const bgBubbleUser = isBgActive ? 'rgba(22,119,255,0.12)' : token.colorPrimaryBg; // 用户消息气泡背景
-  const bgElevated = isBgActive ? 'rgba(0,0,0,0.08)' : token.colorBgElevated;       // 浮层面板背景
-
-  // ===== 文件附件状态 =====
-  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);                   // 当前附加的文件列表
-  const fileInputRef = useRef<HTMLInputElement>(null);                              // 隐藏的文件选择器 DOM 引用
-  const [isDragOver, setIsDragOver] = useState(false);                              // 拖拽文件悬停状态
-  const ALLOWED_FILE_TYPES = '.jpg,.jpeg,.png,.gif,.webp,.pdf,.docx,.doc,.txt,.md'; // 允许的文件扩展名
-  const ALLOWED_MIME_TYPES = [                                                       // 允许的 MIME 类型
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/msword',
-    'text/plain', 'text/markdown',
-  ];
 
   const messagesEndRef = useRef<HTMLDivElement>(null);   // 消息列表底部 DOM 引用（用于滚动）
   const inputRef = useRef<any>(null);                    // 输入框 DOM 引用
-
-  // ===== 文件附件辅助函数 =====
-  // 判断文件是否为图片类型
-  const isImageFile = (file: File) => file.type.startsWith('image/');
-  // 获取文件的预览 URL（仅图片文件返回 blob URL，其他类型返回空字符串）
-  const getFilePreviewUrl = (file: File): string => {
-    if (isImageFile(file)) return URL.createObjectURL(file);
-    return '';
-  };
-  const [previewUrls, setPreviewUrls] = useState<Map<File, string>>(new Map());  // 文件预览 URL 映射表
-
-  /**
-   * 添加文件到附件列表：验证文件类型和大小，去重后追加
-   * @param newFiles - 用户选择的文件列表（来自文件选择器或拖拽）
-   */
-  const addFiles = useCallback((newFiles: FileList | File[]) => {
-    const filesArray = Array.from(newFiles);
-    // 过滤：验证文件扩展名、MIME 类型和大小限制（20MB）
-    const valid = filesArray.filter((f) => {
-      const ext = '.' + f.name.split('.').pop()?.toLowerCase();
-      if (f.size > 20 * 1024 * 1024) {
-        antMessage.warning(`"${f.name}" 超过 20MB 限制，已跳过`);
-        return false;
-      }
-      return ALLOWED_FILE_TYPES.includes(ext) || ALLOWED_MIME_TYPES.includes(f.type);
-    });
-    if (valid.length === 0) {
-      antMessage.warning('不支持的文件格式，支持: JPG/PNG/GIF/WEBP/PDF/DOCX/TXT/MD');
-      return;
-    }
-    // 去重：基于文件名+文件大小组合去重
-    setAttachedFiles((prev) => {
-      const existing = new Set(prev.map((f) => f.name + f.size));
-      const deduped = valid.filter((f) => !existing.has(f.name + f.size));
-      return [...prev, ...deduped];
-    });
-  }, []);
-
-  /**
-   * 从附件列表中移除指定文件
-   * @param fileToRemove - 要移除的文件对象
-   */
-  const removeFile = useCallback((fileToRemove: File) => {
-    setAttachedFiles((prev) => prev.filter((f) => f !== fileToRemove));
-    // 同时移除对应的预览 URL
-    setPreviewUrls((prev) => {
-      const next = new Map(prev);
-      next.delete(fileToRemove);
-      return next;
-    });
-  }, []);
-
-  // 触发隐藏的文件选择器点击
-  const handleFilePicker = useCallback(() => {
-    fileInputRef.current?.click();
-  }, []);
-
-  // 文件选择器 change 事件处理：获取选择的文件列表并调用 addFiles
-  const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files);
-      e.target.value = '';  // 重置 input 值，允许重复选择同一文件
-    }
-  }, [addFiles]);
 
   /**
    * 滚动到消息列表底部
@@ -234,6 +240,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // ===== 副作用：组件挂载时加载知识库列表 =====
   useEffect(() => { fetchKnowledgeBases(); }, []);
+
+  useEffect(() => {
+    getAssistantProfiles()
+      .then((result) => {
+        setAssistantProfiles(result.items);
+        if (!defaultAssistantProfile && (result.default === 'general_qa' || result.default === 'memory_qa')) {
+          setAssistantProfile(result.default);
+        }
+      })
+      .catch(() => {
+        setAssistantProfiles([
+          { profile_id: 'general_qa', name: '普通问答助手', description: '非医学问题直接由大模型回答，医学问题自动融合知识库与互联网证据', session_memory_enabled: false, long_term_memory_enabled: false, auto_web_search: true, intended_use: '通用知识问答' },
+          { profile_id: 'memory_qa', name: '记忆问答助手', description: '保持多轮会话上下文', session_memory_enabled: true, long_term_memory_enabled: true, auto_web_search: false, intended_use: '多轮问诊' },
+        ]);
+      });
+  }, [defaultAssistantProfile]);
+
+  useEffect(() => {
+    getAnswerPreferenceProfile().then(setAnswerPreference).catch(() => undefined);
+  }, []);
 
   // ===== 副作用：如果提供了 initialSessionId，加载该历史会话 =====
   useEffect(() => {
@@ -357,6 +383,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         content: msg.content, thinking: (msg as any).thinking, references: msg.references,
         safety_flag: msg.safety_flag,
         disclaimer: msg.disclaimer, messageId: msg.id, feedbackType: msg.feedback_type,
+        answerVariants: msg.answer_variants_json,
+        recommendedVariantId: msg.recommended_variant_id,
+        selectedVariantId: msg.selected_variant_id,
         timestamp: new Date(msg.created_at || Date.now()),
       })));
       // 恢复该会话绑定的知识库 ID 列表
@@ -386,64 +415,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   /**
-   * 构建流式请求的 URL：如果附加了文件，将端点从 /ask 替换为 /ask-multipart
-   * @param endpoint - 原始端点路径
-   * @param hasFiles - 是否包含文件
-   * @returns 调整后的端点路径
-   */
-  const buildStreamUrl = (endpoint: string, hasFiles: boolean) =>
-    hasFiles ? endpoint.replace('/ask', '/ask-multipart') : endpoint;
-
-  /**
    * 核心功能：发送消息并获取 AI 回复
    * 支持两种模式：
    * 1. 流式模式（streamEndpoint 有值）：通过 fetch SSE 实时显示 AI 输出
    * 2. 非流式模式：通过 API 函数获取完整回复
-   */
+  */
   const handleSend = async () => {
     const question = inputValue.trim();
-    if (!question && attachedFiles.length === 0) return;  // 无内容且无附件则不发送
-    // 检查是否已选择知识库
-    if (selectedKBIds.length === 0 && !autoBindKB && !hideKBSelector) {
-      antMessage.warning('请先选择知识库');
-      return;
-    }
-    // 如果没有文字但有附件，显示附件数量作为消息内容
-    const displayText = question || `[${attachedFiles.length} 个附件]`;
+    if (!question) return;
+    const noKB = selectedKBIds.length === 0 && !autoBindKB && !hideKBSelector;
+    const effectiveKBIds = noKB ? [] : selectedKBIds;
     // 将用户消息追加到消息列表
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: 'user', content: displayText, timestamp: new Date() }]);
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: 'user', content: question, timestamp: new Date() }]);
     setInputValue('');       // 清空输入框
-    setAttachedFiles([]);    // 清空附件
     setLoading(true);        // 进入加载状态
     setStreamingContent(''); // 重置流式内容
     setStreamingThinking('');
-    const hasFiles = attachedFiles.length > 0;
+    setAgentStage({ key: 'input_safety', label: AGENT_STAGE_LABELS.input_safety });
 
     // ===== 流式处理分支（使用 SSE 流式输出） =====
     if (streamEndpoint) {
-      const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
       const token = localStorage.getItem('access_token');
-      const endpoint = buildStreamUrl(streamEndpoint, hasFiles);
       try {
-        let body: BodyInit;
-        const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
-        if (hasFiles) {
-          // 有附件时使用 FormData 方式提交
-          const formData = new FormData();
-          formData.append('question', question);
-          formData.append('web_search_enabled', String(webSearchEnabled));
-          formData.append('deep_thinking_enabled', String(deepThinkingEnabled));
-          formData.append('kb_ids', JSON.stringify(selectedKBIds));
-          if (currentSessionId) formData.append('session_id', String(currentSessionId));
-          attachedFiles.forEach((f) => formData.append('files', f));
-          body = formData;
-        } else {
-          // 纯文本请求使用 JSON 格式
-          headers['Content-Type'] = 'application/json';
-          body = JSON.stringify({ question, kb_ids: selectedKBIds, session_id: currentSessionId, web_search_enabled: webSearchEnabled, deep_thinking_enabled: deepThinkingEnabled });
-        }
+        const headers: Record<string, string> = {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        };
+        const body = JSON.stringify({ question, kb_ids: effectiveKBIds, session_id: currentSessionId, assistant_profile: assistantProfile });
         // 发起 SSE 流式 fetch 请求
-        const resp = await fetch(`${baseUrl}${endpoint}`, {
+        const resp = await fetch(`${baseUrl}${streamEndpoint}`, {
           method: 'POST',
           headers,
           body,
@@ -453,6 +454,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         if (!reader) { antMessage.error('无响应数据'); setLoading(false); return; }
         const decoder = new TextDecoder();
         let buf = '', fullText = '', thinkingText = '', newSid = '', newMessageId: number | undefined = undefined;
+        let cacheHit = false, cacheAgeSeconds: number | undefined = undefined;
+        let answerVariants: AnswerVariant[] = [], recommendedVariantId: string | undefined = undefined;
+        const streamedReferences: any[] = [];
         // 持续读取流式响应数据
         while (true) {
           const { done, value } = await reader.read();
@@ -464,6 +468,25 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             if (!line.startsWith('data: ')) continue;  // SSE 数据以 "data: " 开头
             try {
               const d = JSON.parse(line.slice(6));  // 去掉 "data: " 前缀后解析 JSON
+              if (d.type && AGENT_STAGE_LABELS[d.type]) {
+                const isError = d.type === 'error';
+                const needsAttention = d.type === 'clarification_required' || d.type === 'human_review_required';
+                setAgentStage({
+                  key: d.type,
+                  label: AGENT_STAGE_LABELS[d.type],
+                  detail: d.error_code || d.reason,
+                  severity: isError ? 'error' : needsAttention ? 'warning' : 'info',
+                });
+              }
+              if (d.evidence_id) streamedReferences.push(d);
+              if (d.type === 'cache_hit' || d.cache_hit) {
+                cacheHit = true;
+                cacheAgeSeconds = d.age_seconds ?? d.cache_age_seconds;
+              }
+              if (d.type === 'answer_variants' && Array.isArray(d.items)) {
+                answerVariants = d.items;
+                recommendedVariantId = d.recommended_variant_id;
+              }
               if (d.type === 'think' && d.token) {
                 // 思考过程 token（type 为 "think"）
                 thinkingText += d.token;
@@ -478,6 +501,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 newSid = d.session_id || '';
                 if (d.thinking) thinkingText = d.thinking;
                 if (d.message_id) newMessageId = d.message_id;
+                if (d.recommended_variant_id) recommendedVariantId = d.recommended_variant_id;
               }
               if (d.error) antMessage.error(d.error);
             } catch { /* 跳过解析失败的行 */ }
@@ -489,39 +513,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           fetchAllSessions();
         }
         // 将完整的 AI 回复追加到消息列表
-        setMessages((prev) => [...prev, { id: `assistant-${Date.now()}`, role: 'assistant', content: fullText, thinking: thinkingText, messageId: newMessageId, timestamp: new Date() }]);
+        setMessages((prev) => [...prev, { id: `assistant-${Date.now()}`, role: 'assistant', content: fullText, thinking: thinkingText, references: streamedReferences, messageId: newMessageId, cache_hit: cacheHit, cache_age_seconds: cacheAgeSeconds, answerVariants, recommendedVariantId, timestamp: new Date() }]);
         setStreamingContent('');
         setStreamingThinking('');
-      } catch (error: any) { antMessage.error('请求失败: ' + error.message); setStreamingContent(''); setStreamingThinking(''); } finally { setLoading(false); }
+      } catch (error: any) { antMessage.error('请求失败: ' + error.message); setStreamingContent(''); setStreamingThinking(''); setAgentStage({ key: 'error', label: AGENT_STAGE_LABELS.error, detail: error.message, severity: 'error' }); } finally { setLoading(false); }
     } else {
       // ===== 非流式处理分支 =====
-      if (hasFiles) {
-        // 有附件：使用 multipart 上传接口
-        try {
-          const response = await askQuestionMultipart(
-            question, selectedKBIds, attachedFiles,
-            currentSessionId ? Number(currentSessionId) : undefined,
-            webSearchEnabled, deepThinkingEnabled,
-          );
-          if (!currentSessionId && (response as any).session_id) {
-            setCurrentSessionId(String((response as any).session_id));
-            fetchAllSessions();
-          }
-          setMessages((prev) => [...prev, { id: `assistant-${Date.now()}`, role: 'assistant', content: response.answer, thinking: (response as any).thinking, references: response.references, safety_flag: response.safety_flag, disclaimer: response.disclaimer, messageId: (response as any).message_id, timestamp: new Date() }]);
-          setStreamingContent('');
-        } catch (error: any) { antMessage.error('请求失败: ' + (error.response?.data?.detail || error.message)); setStreamingContent(''); setStreamingThinking(''); } finally { setLoading(false); }
-      } else {
-        // 纯文本：使用传入的 apiFunction
-        try {
-          const response = await apiFunction({ question, kb_ids: selectedKBIds, session_id: currentSessionId, web_search_enabled: webSearchEnabled, deep_thinking_enabled: deepThinkingEnabled });
-          if (!currentSessionId && (response as any).session_id) {
-            setCurrentSessionId((response as any).session_id);
-            fetchAllSessions();
-          }
-          setMessages((prev) => [...prev, { id: `assistant-${Date.now()}`, role: 'assistant', content: response.answer, thinking: (response as any).thinking, references: response.references, safety_flag: response.safety_flag, disclaimer: response.disclaimer, messageId: (response as any).message_id, timestamp: new Date() }]);
-          setStreamingContent('');
-        } catch (error: any) { antMessage.error('请求失败: ' + (error.response?.data?.detail || error.message)); setStreamingContent(''); setStreamingThinking(''); } finally { setLoading(false); }
-      }
+      try {
+        const response = await apiFunction({ question, kb_ids: effectiveKBIds, session_id: currentSessionId, assistant_profile: assistantProfile });
+        if (!currentSessionId && (response as any).session_id) {
+          setCurrentSessionId((response as any).session_id);
+          fetchAllSessions();
+        }
+        setMessages((prev) => [...prev, { id: `assistant-${Date.now()}`, role: 'assistant', content: response.answer, thinking: (response as any).thinking, references: response.references, safety_flag: response.safety_flag, disclaimer: response.disclaimer, messageId: (response as any).message_id, cache_hit: response.cache_hit, cache_age_seconds: response.cache_age_seconds, answerVariants: response.answer_variants, recommendedVariantId: response.recommended_variant_id, timestamp: new Date() }]);
+        setStreamingContent('');
+      } catch (error: any) { antMessage.error('请求失败: ' + (error.response?.data?.detail || error.message)); setStreamingContent(''); setStreamingThinking(''); } finally { setLoading(false); }
     }
   };
 
@@ -531,6 +537,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
+
+  /**
+   * 消息编辑处理：允许用户编辑自己的消息内容
+   * 编辑后消息标记为已编辑状态，并更新本地消息列表
+   * @param messageId - 消息 ID
+   * @param newContent - 编辑后的内容
+   */
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    setMessages((prev) => prev.map((msg) =>
+      msg.id === messageId ? { ...msg, content: newContent, edited: true } : msg
+    ));
+    // 可以在这里触发重新发送编辑后的消息
+    antMessage.success('消息已更新');
+  };
+
+  /**
+   * 引用点击处理：滚动到对应的引用区域
+   */
+  const handleCitationClick = useCallback((detail: { index: number; reference: any }) => {
+    // 通过自定义事件，高亮对应的引用区块
+    const refEl = document.getElementById(`reference-${detail.index}`);
+    if (refEl) {
+      refEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      refEl.style.transition = 'background 0.5s';
+      refEl.style.background = '#fff7e6';
+      setTimeout(() => { refEl.style.background = ''; }, 2000);
+    }
+  }, []);
+
+  // 注册引用点击事件监听
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      handleCitationClick(detail);
+    };
+    window.addEventListener('citation-click', handler);
+    return () => window.removeEventListener('citation-click', handler);
+  }, [handleCitationClick]);
 
   /**
    * 用户反馈处理：点赞或点踩某条 AI 回复
@@ -547,6 +591,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     } catch { antMessage.error('提交反馈失败'); }
   };
 
+  const handleChooseAnswerVariant = async (msg: ChatMessage, variant: AnswerVariant) => {
+    if (!msg.messageId) {
+      antMessage.error('回答尚未完成保存，请稍后再选择');
+      return;
+    }
+    try {
+      const result = await submitAnswerPreference(msg.messageId, variant.variant_id);
+      setAnswerPreference(result.profile);
+      setMessages((prev) => prev.map((item) => item.id === msg.id ? {
+        ...item,
+        selectedVariantId: variant.variant_id,
+        content: variant.answer,
+        references: variant.citations,
+      } : item));
+      const label = result.profile.preferred_style === 'detailed_guidance' ? '详细指导版' : '精炼证据版';
+      antMessage.success(`已记录选择，当前偏好：${label}`);
+    } catch (error: any) {
+      antMessage.error(error.response?.data?.detail || '偏好保存失败');
+    }
+  };
+
   /**
    * 打开历史会话弹窗：先刷新会话列表再显示
    */
@@ -557,29 +622,63 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
    * @param references - 参考文献数组
    * @returns JSX 元素或 null
    */
-  const renderReferences = (references: any[]) => {
+  const renderReferences = (references: any[], sharedByVariants = false) => {
     if (!references || references.length === 0) return null;
     return (
-      <div style={{ marginTop: 12, padding: '8px 12px', background: bgElevated, borderRadius: 6, border: `1px solid ${token.colorBorder}` }}>
-        {/* 参考文献标题行 */}
-        <Space style={{ marginBottom: 4 }}><BookOutlined style={{ color: token.colorPrimary }} /><Text strong style={{ fontSize: 13 }}>参考文献</Text></Space>
-        {/* 文献列表 */}
-        <List size="small" dataSource={references} renderItem={(ref: any, index: number) => (
-          <List.Item style={{ padding: '4px 0', border: 'none' }}>
-            <Space align="start">
-              {/* 序号 */}
-              <Tag color="blue" style={{ minWidth: 20, textAlign: 'center' }}>{index + 1}</Tag>
-              <div>
-                {/* 文献标题/文件名 */}
-                <Text style={{ fontSize: 13 }}>{ref.title || ref.filename || `文献 ${index + 1}`}</Text>
-                {/* 文献内容摘要（截断前 200 字符） */}
-                {ref.content && <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>{ref.content.substring(0, 200)}{ref.content.length > 200 ? '...' : ''}</Text>}
-                {/* 原始链接（如果有） */}
-                {ref.url && <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}><LinkOutlined /> 查看原文</a>}
-              </div>
-            </Space>
-          </List.Item>
-        )} />
+      <details className="answer-references" data-testid="answer-references">
+        <summary>
+          <BookOutlined style={{ color: token.colorPrimary }} />
+          <Text strong style={{ fontSize: 13 }}>依据与参考文献</Text>
+          <Tag color="blue" style={{ marginInlineEnd: 0 }}>{references.length} 条</Tag>
+          {sharedByVariants && <Tag style={{ marginInlineEnd: 0 }}>两个版本共用</Tag>}
+          <span className="answer-reference-hint">点击展开查看来源</span>
+        </summary>
+        <div className="answer-reference-list">
+          <List size="small" dataSource={references} renderItem={(ref: any, index: number) => (
+            <List.Item
+              id={`reference-${index}`}
+              style={{ padding: '8px 0', borderBlockEnd: index === references.length - 1 ? 'none' : undefined, borderRadius: 4, transition: 'background 0.3s' }}
+            >
+              <Space align="start">
+                <Tag color="blue" style={{ minWidth: 24, textAlign: 'center', cursor: 'pointer', borderRadius: 12 }}
+                  onClick={() => window.dispatchEvent(new CustomEvent('citation-click', { detail: { index, reference: ref } }))}
+                >{index + 1}</Tag>
+                <div>
+                  <Text strong style={{ fontSize: 13 }}>{ref.title || ref.filename || ref.source_name || `文献 ${index + 1}`}</Text>
+                  {ref.content && <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2, lineHeight: 1.6 }}>{ref.content.substring(0, 220)}{ref.content.length > 220 ? '...' : ''}</Text>}
+                  {ref.url && <a href={ref.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12 }}><LinkOutlined /> 查看原文</a>}
+                </div>
+              </Space>
+            </List.Item>
+          )} />
+        </div>
+      </details>
+    );
+  };
+
+  const renderStructuredAnswer = (content: string, references?: any[]) => {
+    const parsed = parseAnswerContent(content);
+    const secondarySections = [
+      { key: 'uncertainty', title: '不确定性', content: parsed.uncertainty },
+      { key: 'limitations', title: '适用范围与限制', content: parsed.limitations },
+      { key: 'nextSteps', title: '下一步建议', content: parsed.nextSteps },
+    ].filter((section) => section.content);
+    return (
+      <div className="answer-content-layout">
+        <section className="answer-primary-panel" data-testid="answer-primary">
+          <div className="answer-section-heading"><CheckCircleFilled /> 核心回答</div>
+          <EnhancedMarkdown content={parsed.main} references={references} />
+        </section>
+        {secondarySections.length > 0 && (
+          <div className="answer-secondary-grid" data-testid="answer-secondary-info">
+            {secondarySections.map((section) => (
+              <section key={section.key} className={`answer-secondary-card${secondarySections.length === 1 ? ' is-wide' : ''}`}>
+                <div className="answer-secondary-title"><InfoCircleOutlined /> {section.title}</div>
+                <EnhancedMarkdown content={section.content} references={references} />
+              </section>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -591,6 +690,41 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
    */
   const renderMessage = (msg: ChatMessage) => {
     const isUser = msg.role === 'user';
+    const hasVariants = !isUser && !!msg.answerVariants && msg.answerVariants.length >= 2;
+    const activeVariant = hasVariants
+      ? msg.answerVariants!.find((item) => item.variant_id === msg.selectedVariantId)
+        || msg.answerVariants!.find((item) => item.variant_id === msg.recommendedVariantId)
+        || msg.answerVariants![0]
+      : undefined;
+    const sharedReferences = activeVariant?.citations?.length ? activeVariant.citations : (msg.references || []);
+    const parsedMessage = !isUser ? parseAnswerContent(msg.content) : undefined;
+    const embeddedDisclaimers = hasVariants
+      ? msg.answerVariants!.map((variant) => parseAnswerContent(variant.answer).disclaimer)
+      : [parsedMessage?.disclaimer || ''];
+    const safetyNotes = Array.from(new Set([
+      showSafetyWarning && msg.safety_flag ? '以上内容仅供健康参考，不能替代专业医疗建议；如有明显不适或紧急症状，请及时就医。' : '',
+      ...embeddedDisclaimers,
+      msg.disclaimer || '',
+    ].map((item) => item.trim()).filter(Boolean)));
+    const assistantSurface = isBgActive
+      ? (resolvedMode === 'dark' ? 'rgba(24, 24, 28, 0.88)' : 'rgba(255, 255, 255, 0.9)')
+      : token.colorBgContainer;
+    const messageStyle = {
+      maxWidth: isUser ? '76%' : 'calc(100% - 48px)',
+      width: isUser ? 'auto' : '100%',
+      minWidth: 0,
+      padding: isUser ? '12px 16px' : '4px 0 10px',
+      borderRadius: 12,
+      background: isUser ? bgBubbleUser : 'transparent',
+      borderTopRightRadius: isUser ? 4 : 12,
+      borderTopLeftRadius: isUser ? 12 : 4,
+      '--answer-surface': assistantSurface,
+      '--answer-subtle': token.colorFillAlter,
+      '--answer-border': token.colorBorderSecondary,
+      '--answer-primary': token.colorPrimary,
+      '--answer-primary-soft': token.colorPrimaryBg,
+      '--answer-text-secondary': token.colorTextSecondary,
+    } as React.CSSProperties;
     return (
       <div key={msg.id} style={{ display: 'flex', flexDirection: isUser ? 'row-reverse' : 'row', marginBottom: 20, gap: 12 }}>
         {/* 消息头像：用户为蓝色圆形+用户图标，AI 为绿色圆形+机器人图标 */}
@@ -598,29 +732,67 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {isUser ? <UserOutlined /> : <RobotOutlined />}
         </div>
         {/* 消息气泡 */}
-        <div style={{ maxWidth: '80%', padding: '12px 16px', borderRadius: 12, background: isUser ? bgBubbleUser : bgContainer, borderTopRightRadius: isUser ? 4 : 12, borderTopLeftRadius: isUser ? 12 : 4 }}>
-          {/* 用户消息：纯文本显示；AI 消息：Markdown 渲染 */}
-          {isUser ? <Text style={{ whiteSpace: 'pre-wrap', fontSize: 14 }}>{msg.content}</Text>
-            : <div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown></div>}
-          {/* AI 深度思考过程：可折叠/展开的 details 标签 */}
-          {!isUser && msg.thinking && (
-              <details style={{ marginTop: 12, marginBottom: 12 }} open>
-                <summary style={{ cursor: 'pointer', userSelect: 'none', fontSize: 13, color: token.colorPrimary, fontWeight: 500 }}>
-                  🧠 深度思考过程
-                </summary>
-                <div style={{ marginTop: 8, padding: 10, background: token.colorFillQuaternary, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, fontSize: 13, color: token.colorTextSecondary, lineHeight: 1.6 }}>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.thinking}</ReactMarkdown>
-                </div>
-              </details>
-            )}
-          {/* 参考文献展示 */}
-          {!isUser && msg.references && msg.references.length > 0 && renderReferences(msg.references)}
-          {/* 健康安全警告（仅健康咨询页面启用） */}
-          {!isUser && showSafetyWarning && msg.safety_flag && (
-            <Alert message="健康提醒" description="以上内容仅供参考，不能替代专业医疗建议。如有身体不适，请及时就医。" type="warning" showIcon icon={<WarningOutlined />} style={{ marginTop: 12, fontSize: 13 }} />
+        <div className={isUser ? undefined : 'assistant-message-bubble'} style={messageStyle}>
+          {!isUser && msg.cache_hit && (
+            <Tag color="green" style={{ marginBottom: 8 }}>
+              Redis 高频答案命中{msg.cache_age_seconds !== undefined ? ` · 缓存 ${Math.round(msg.cache_age_seconds)} 秒` : ''}
+            </Tag>
           )}
-          {/* 自定义免责声明 */}
-          {!isUser && msg.disclaimer && <Alert message="免责声明" description={msg.disclaimer} type="info" showIcon style={{ marginTop: 12, fontSize: 13 }} />}
+          {/* 用户消息：使用 EnhancedMarkdown（支持编辑）；AI 消息：增强 Markdown 渲染（支持 LaTeX、引用） */}
+          {isUser ? (
+            <div>
+              <EnhancedMarkdown content={msg.content} isUser onEdit={(newContent) => handleEditMessage(msg.id, newContent)} />
+              {msg.edited && <Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>（已编辑）</Text>}
+            </div>
+          ) : hasVariants ? (
+            <div data-testid="answer-variant-comparison">
+              <div className="answer-comparison-header">
+                <div>
+                  <div className="answer-comparison-title"><RobotOutlined style={{ color: token.colorSuccess }} /> 两个回答版本</div>
+                  <div className="answer-comparison-subtitle">使用完全相同的证据依据，仅在信息密度与表达方式上有所不同。</div>
+                </div>
+                <Space wrap size={[4, 4]}>
+                  <Tag color="blue">共同依据 {sharedReferences.length} 条</Tag>
+                  <Tag color="gold">选择偏好后持续学习</Tag>
+                </Space>
+              </div>
+              <div className="answer-variant-grid">
+                {msg.answerVariants!.map((variant) => {
+                  const selected = msg.selectedVariantId === variant.variant_id;
+                  const recommended = msg.recommendedVariantId === variant.variant_id;
+                  return (
+                    <Card
+                      key={variant.variant_id}
+                      size="small"
+                      className={`answer-variant-card${recommended ? ' is-recommended' : ''}${selected ? ' is-selected' : ''}`}
+                      title={<Space wrap><Text strong>{variant.label}</Text>{recommended && <Tag color="purple">为你优先</Tag>}{selected && <Tag color="green">已选择</Tag>}</Space>}
+                      actions={[
+                        <Button
+                          key="choose"
+                          type={selected ? 'primary' : 'default'}
+                          disabled={selected || !msg.messageId}
+                          onClick={() => handleChooseAnswerVariant(msg, variant)}
+                          icon={selected ? <CheckCircleFilled /> : undefined}
+                        >{selected ? '已选择' : '选择此版本'}</Button>,
+                      ]}
+                    >
+                      {renderStructuredAnswer(variant.answer, variant.citations)}
+                    </Card>
+                  );
+                })}
+              </div>
+              {sharedReferences.length > 0 && renderReferences(sharedReferences, true)}
+            </div>
+          ) : (
+            renderStructuredAnswer(msg.content, msg.references)
+          )}
+          {!isUser && !hasVariants && sharedReferences.length > 0 && renderReferences(sharedReferences)}
+          {!isUser && safetyNotes.length > 0 && (
+            <section className="answer-safety-panel" data-testid="answer-safety">
+              <div className="answer-safety-title"><SafetyCertificateOutlined /> 安全与使用边界</div>
+              {safetyNotes.map((note, index) => <p className="answer-safety-note" key={`${note}-${index}`}>{note}</p>)}
+            </section>
+          )}
           {/* 点赞/点踩反馈按钮 */}
           {!isUser && msg.messageId && (
             <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
@@ -733,19 +905,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   {/* 多选下拉：选择要绑定的知识库 */}
                   <Select mode="multiple" placeholder={autoBindKB ? "可选其他知识库" : "选择知识库"} value={selectedKBIds} onChange={setSelectedKBIds} options={kbOptions} loading={kbLoading} style={{ minWidth: 200, maxWidth: 400 }} allowClear notFoundContent={kbLoading ? <Spin size="small" /> : <Empty description="暂无知识库" />} />
                 </>}
-            {/* 联网搜索开关 */}
-            <Tooltip title={webSearchEnabled ? '联网搜索已开启，将同时搜索网络和知识库' : '联网搜索已关闭，仅使用知识库'}>
-              <Space size={4}>
-                <GlobalOutlined style={{ color: webSearchEnabled ? token.colorPrimary : token.colorTextQuaternary }} />
-                <Switch size="small" checked={webSearchEnabled} onChange={setWebSearchEnabled} />
-              </Space>
+            <Tooltip title={assistantProfile === 'general_qa' ? '非医学问题直接由大模型回答；医学问题自动检索授权知识库与互联网' : '检索授权知识库，并按医疗意图调用受控在线医学来源'}>
+              <Tag color={assistantProfile === 'general_qa' ? 'green' : 'cyan'} style={{ marginRight: 0 }}>
+                {assistantProfile === 'general_qa' ? <><GlobalOutlined /> 智能路由问答</> : '知识库混合检索'}
+              </Tag>
             </Tooltip>
-            {/* 深度思考开关 */}
-            <Tooltip title={deepThinkingEnabled ? '深度思考已开启，将展示推理过程' : '深度思考已关闭，仅展示最终答案'}>
-              <Space size={4}>
-                <span style={{ fontSize: 16 }}>🧠</span>
-                <Switch size="small" checked={deepThinkingEnabled} onChange={setDeepThinkingEnabled} />
-              </Space>
+            <Tooltip title={assistantProfiles.find((item) => item.profile_id === assistantProfile)?.description}>
+              <Select
+                value={assistantProfile}
+                onChange={setAssistantProfile}
+                style={{ width: 150 }}
+                options={assistantProfiles.map((item) => ({ value: item.profile_id, label: item.name }))}
+              />
+            </Tooltip>
+            <Tag color={assistantProfile === 'memory_qa' ? 'purple' : 'default'} style={{ marginRight: 0 }}>
+              {assistantProfile === 'memory_qa' ? '持久记忆已开启' : '不写入持久记忆'}
+            </Tag>
+            <Tooltip title="每次选择都会更新下一轮的回答排序偏好">
+              <Tag color="gold" style={{ marginRight: 0 }}>
+                偏好学习：{answerPreference?.preferred_style === 'detailed_guidance' ? '详细版' : '精炼版'} · {answerPreference?.total_choices || 0} 次选择
+              </Tag>
             </Tooltip>
             {/* 历史记录按钮 */}
             <Button icon={<HistoryOutlined />} onClick={() => { fetchSessions(); openHistory(); }}>历史记录</Button>
@@ -757,24 +936,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
 
         {/* ----- 消息展示区域 ----- */}
-        <div
-          style={{
-            flex: 1, overflow: 'auto', padding: '20px', background: bgLayout,
-            outline: isDragOver ? `2px dashed ${token.colorPrimary}` : 'none',  // 拖拽悬停时显示虚线边框
-            outlineOffset: -2,
-          }}
-          // 拖拽事件处理
-          onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-          onDragLeave={(e) => { e.preventDefault(); setIsDragOver(false); }}
-          onDrop={(e) => { e.preventDefault(); setIsDragOver(false); if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files); }}
-        >
-          {/* 拖拽悬停时显示的提示文字 */}
-          {isDragOver && (
-            <div style={{ textAlign: 'center', padding: 40, color: token.colorPrimary }}>
-              <UploadOutlined style={{ fontSize: 36 }} />
-              <Title level={5} style={{ color: token.colorPrimary, marginTop: 8 }}>释放文件以附加到对话</Title>
-            </div>
-          )}
+        <div style={{ flex: 1, overflow: 'auto', padding: '20px', background: bgLayout }}>
           {sessionLoading ? (
             // 正在加载会话详情
             <div style={{ textAlign: 'center', padding: 60 }}><Spin size="large" tip="加载会话中..." /></div>
@@ -798,20 +960,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <div style={{ display: 'flex', flexDirection: 'row', marginBottom: 20, gap: 12 }}>
                   <div style={{ width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: token.colorSuccess, color: '#fff', flexShrink: 0 }}><RobotOutlined /></div>
                   <div style={{ maxWidth: '80%', padding: '12px 16px', borderRadius: 12, background: bgContainer, borderTopLeftRadius: 4 }}>
-                    {/* 如果正在输出思考过程，显示思考框 */}
-                    {streamingThinking && (
-                      <div style={{ marginBottom: streamingContent ? 12 : 0, padding: 8, background: token.colorFillQuaternary, borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`, maxHeight: 'none', overflow: 'visible' }}>
-                        <Text strong style={{ fontSize: 12, color: token.colorPrimary }}>🧠 深度思考过程</Text>
-                        <div className="markdown-content" style={{ marginTop: 4, fontSize: 13, color: token.colorTextSecondary }}>
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamingThinking}</ReactMarkdown>
-                        </div>
-                      </div>
-                    )}
                     {/* 如果正在输出回答内容，显示流式 Markdown；否则显示"思考中..." */}
                     {streamingContent ? (
                       <div className="markdown-content"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>{streamingContent}</ReactMarkdown></div>
                     ) : (
-                      <Space><Spin size="small" /><Text type="secondary">思考中...</Text></Space>
+                      <Space direction="vertical" size={4}>
+                        <Space><Spin size="small" /><Text type="secondary">{agentStage?.label || '正在处理...'}</Text></Space>
+                        {agentStage?.detail && <Text type={agentStage.severity === 'error' ? 'danger' : 'secondary'}>{agentStage.detail}</Text>}
+                      </Space>
                     )}
                   </div>
                 </div>
@@ -824,76 +980,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         {/* ===== 底部输入区域 ===== */}
         <div style={{ padding: '12px 20px', borderTop: `1px solid ${token.colorBorderSecondary}`, background: bgContainer }}>
-          {/* 已附加文件的预览缩略图列表 */}
-          {attachedFiles.length > 0 && (
-            <div
-              style={{
-                display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8,
-                padding: 8, background: token.colorFillQuaternary, borderRadius: 8,
-              }}
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}  // 防止拖拽区域嵌套干扰
-            >
-              {attachedFiles.map((file, idx) => (
-                <div
-                  key={`${file.name}-${idx}`}
-                  style={{
-                    position: 'relative', display: 'flex', alignItems: 'center',
-                    gap: 4, padding: '2px 8px 2px 4px',
-                    background: token.colorBgContainer, borderRadius: 6,
-                    border: `1px solid ${token.colorBorderSecondary}`,
-                    maxWidth: 200,
-                  }}
-                >
-                  {/* 图片文件显示缩略图，其他文件显示文件图标 */}
-                  {isImageFile(file) ? (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt={file.name}
-                      style={{ width: 28, height: 28, borderRadius: 4, objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <FileOutlined style={{ fontSize: 16, color: token.colorPrimary }} />
-                  )}
-                  {/* 文件名（自动省略） */}
-                  <Text ellipsis style={{ fontSize: 12, maxWidth: 100 }}>{file.name}</Text>
-                  {/* 移除按钮 */}
-                  <CloseCircleOutlined
-                    style={{ color: token.colorError, cursor: 'pointer', fontSize: 12 }}
-                    onClick={() => removeFile(file)}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
           {/* 输入框和发送按钮行 */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             {/* 多行文本输入框：支持自动扩展高度，Enter 发送 */}
             <TextArea ref={inputRef} value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="输入您的问题，按 Enter 发送，Shift+Enter 换行..." autoSize={{ minRows: 2, maxRows: 6 }} disabled={loading} style={{ flex: 1 }} />
-            {/* 附件上传按钮 */}
-            <Tooltip title="上传图片或文件">
-              <Button
-                icon={<PaperClipOutlined />}
-                onClick={handleFilePicker}
-                disabled={loading}
-                style={{ height: 42, width: 42 }}
-              />
-            </Tooltip>
             {/* 发送按钮 */}
             <Button type="primary" icon={<SendOutlined />} onClick={handleSend} loading={loading}
-              disabled={(!inputValue.trim() && attachedFiles.length === 0) || (selectedKBIds.length === 0 && !autoBindKB && !hideKBSelector)} style={{ height: 42 }}>
+              disabled={!inputValue.trim()} style={{ height: 42 }}>
               发送
             </Button>
           </div>
-          {/* 隐藏的文件选择器 input */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept={ALLOWED_FILE_TYPES}
-            onChange={handleFileInputChange}
-            style={{ display: 'none' }}
-          />
         </div>
       </div>
 

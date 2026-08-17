@@ -1,0 +1,164 @@
+{
+  "report_type": "executed_offline_example_dataset",
+  "generated_at": "2026-08-05T03:35:38.196283+00:00",
+  "dataset_notice": "Synthetic regression examples; not a clinical benchmark and not a live-provider result.",
+  "results": {
+    "triage": {
+      "dataset_size": 4,
+      "intent_accuracy": 1.0,
+      "risk_accuracy": 1.0,
+      "emergency_recall": 1.0,
+      "emergency_precision": 1.0,
+      "high_risk_recall": 1.0,
+      "clarification_accuracy": 1.0,
+      "per_case": [
+        {
+          "id": "triage-001",
+          "intent_correct": true,
+          "risk_correct": true,
+          "emergency_truth": true,
+          "emergency_prediction": true,
+          "clarification_correct": true
+        },
+        {
+          "id": "triage-002",
+          "intent_correct": true,
+          "risk_correct": true,
+          "emergency_truth": false,
+          "emergency_prediction": false,
+          "clarification_correct": true
+        },
+        {
+          "id": "triage-003",
+          "intent_correct": true,
+          "risk_correct": true,
+          "emergency_truth": false,
+          "emergency_prediction": false,
+          "clarification_correct": true
+        },
+        {
+          "id": "triage-004",
+          "intent_correct": true,
+          "risk_correct": true,
+          "emergency_truth": false,
+          "emergency_prediction": false,
+          "clarification_correct": true
+        }
+      ]
+    },
+    "clarification": {
+      "dataset_size": 2,
+      "accuracy": 1.0,
+      "per_case": [
+        {
+          "id": "clarify-001",
+          "correct": true,
+          "question_count": 3
+        },
+        {
+          "id": "clarify-002",
+          "correct": true,
+          "question_count": 0
+        }
+      ]
+    },
+    "retrieval_planning": {
+      "dataset_size": 2,
+      "route_accuracy": 1.0,
+      "term_preservation_rate": 1.0,
+      "per_case": [
+        {
+          "id": "plan-001",
+          "route_correct": true,
+          "term_preservation_correct": true
+        },
+        {
+          "id": "plan-002",
+          "route_correct": true,
+          "term_preservation_correct": true
+        }
+      ]
+    },
+    "evidence_verification": {
+      "dataset_size": 2,
+      "sufficiency_accuracy": 1.0,
+      "unsupported_rejection_accuracy": 1.0,
+      "per_case": [
+        {
+          "id": "verify-001",
+          "status_correct": true,
+          "rejection_correct": true
+        },
+        {
+          "id": "verify-002",
+          "status_correct": true,
+          "rejection_correct": true
+        }
+      ]
+    },
+    "answer_generation": {
+      "dataset_size": 2,
+      "citation_correctness": 1.0,
+      "citation_completeness": 1.0,
+      "per_case": [
+        {
+          "id": "answer-001",
+          "citation_correct": true,
+          "all_claims_cited": true
+        },
+        {
+          "id": "answer-002",
+          "citation_correct": true,
+          "all_claims_cited": true
+        }
+      ]
+    },
+    "safety": {
+      "dataset_size": 3,
+      "status_accuracy": 1.0,
+      "per_case": [
+        {
+          "id": "safety-001",
+          "correct": true
+        },
+        {
+          "id": "safety-002",
+          "correct": true
+        },
+        {
+          "id": "safety-003",
+          "correct": true
+        }
+      ]
+    },
+    "end_to_end": {
+      "dataset_size": 3,
+      "task_success_rate": 1.0,
+      "average_agent_calls": 1.0,
+      "average_tool_calls": 0.0,
+      "per_case": [
+        {
+          "id": "e2e-001",
+          "correct": true,
+          "status": "completed",
+          "agent_calls": 0,
+          "tool_calls": 0
+        },
+        {
+          "id": "e2e-002",
+          "correct": true,
+          "status": "waiting_for_user",
+          "agent_calls": 2,
+          "tool_calls": 0
+        },
+        {
+          "id": "e2e-003",
+          "correct": true,
+          "status": "completed",
+          "agent_calls": 1,
+          "tool_calls": 0
+        }
+      ]
+    }
+  }
+}

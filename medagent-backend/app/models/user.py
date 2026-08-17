@@ -12,6 +12,7 @@ class User(MySQLBase):
 
     # 主键 ID，自增的大整数
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id = Column(BigInteger, nullable=False, default=1, index=True)
     # 用户名，唯一且不可为空，建有索引用于快速查询和登录
     username = Column(String(100), unique=True, nullable=False, index=True)
     # 密码哈希值（非明文密码），不可为空，最大长度 255

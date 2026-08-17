@@ -1,0 +1,77 @@
+{
+  "dataset": "evals\\datasets\\hybrid_routing_cases.jsonl",
+  "sample_size": 7,
+  "execution_mode_accuracy": 1.0,
+  "under_routing_rate": 0.0,
+  "over_routing_rate": 0.0,
+  "unnecessary_multi_agent_rate": 0.0,
+  "router_tokens": 0,
+  "escalation_validation": {
+    "expected": "MULTI_AGENT",
+    "actual": "MULTI_AGENT",
+    "reason": "multiple_dependent_tools",
+    "passed": true
+  },
+  "cases": [
+    {
+      "id": "hybrid-simple-001",
+      "expected": "DIRECT",
+      "actual": "DIRECT",
+      "score": 0.0006,
+      "confidence": 0.99,
+      "passed": true
+    },
+    {
+      "id": "hybrid-medium-001",
+      "expected": "REACT",
+      "actual": "REACT",
+      "score": 0.22,
+      "confidence": 0.656,
+      "passed": true
+    },
+    {
+      "id": "hybrid-complex-001",
+      "expected": "MULTI_AGENT",
+      "actual": "MULTI_AGENT",
+      "score": 0.6211,
+      "confidence": 0.99,
+      "passed": true
+    },
+    {
+      "id": "hybrid-complex-002",
+      "expected": "MULTI_AGENT",
+      "actual": "MULTI_AGENT",
+      "score": 0.6652,
+      "confidence": 0.99,
+      "passed": true
+    },
+    {
+      "id": "hybrid-complex-003",
+      "expected": "MULTI_AGENT",
+      "actual": "MULTI_AGENT",
+      "score": 0.6414,
+      "confidence": 0.99,
+      "passed": true
+    },
+    {
+      "id": "hybrid-complex-004",
+      "expected": "MULTI_AGENT",
+      "actual": "MULTI_AGENT",
+      "score": 0.5655,
+      "confidence": 0.9479,
+      "passed": true
+    },
+    {
+      "id": "hybrid-complex-005",
+      "expected": "MULTI_AGENT",
+      "actual": "MULTI_AGENT",
+      "score": 0.6237,
+      "confidence": 0.99,
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "This benchmark measures deterministic routing and escalation decisions, not answer-generation quality.",
+    "Token/cost/latency savings require matched production traces or an executed all-multi-agent baseline and are not fabricated here."
+  ]
+}

@@ -16,12 +16,13 @@ alembic>=1.13.0                  # 数据库迁移工具，与 SQLAlchemy 配合
 # ── 数据库驱动 ──────────────────────────────────────────────────────────────────
 psycopg2-binary>=2.9.10          # PostgreSQL 数据库驱动（pgvector 向量搜索需要）
 pymysql>=1.1.0                   # MySQL 数据库驱动（纯 Python 实现）
+pymongo>=4.10.0                  # MongoDB 驱动（多轮会话记忆持久化）
 
 # ── 安全与加密 ──────────────────────────────────────────────────────────────────
 cryptography>=41.0.0             # 加密库，提供哈希、签名等底层加密功能
 python-jose[cryptography]>=3.3.0 # JWT 令牌的生成与验证（JSON Web Token）
 passlib[bcrypt]>=1.7.4           # 密码哈希库，安全存储用户密码
-bcrypt>=4.0.1                    # bcrypt 密码哈希算法
+bcrypt>=4.0.1,<5                 # Passlib 1.7.x compatibility; bcrypt 5 rejects its backend probe
 
 # ── 文件上传 ────────────────────────────────────────────────────────────────────
 python-multipart>=0.0.6          # 处理 multipart/form-data 请求（文件上传必需）
@@ -44,7 +45,13 @@ pgvector>=0.2.4                  # pgvector Python 绑定，用于 PostgreSQL �
 
 # ── 文档解析 ────────────────────────────────────────────────────────────────────
 PyMuPDF>=1.25.0                  # PDF 文本提取（fitz 库），解析医学文档 PDF
+easyocr>=1.7.2                   # 扫描 PDF 的中英文 OCR（模型在 worker 中惰性加载并复用）
+numpy>=1.26.0                    # 将 PyMuPDF 渲染结果转换为 EasyOCR 输入
+Pillow>=10.0.0                   # OCR 灰度、对比度、去噪和图像预处理
 python-docx>=1.0.0               # Word 文档 .docx 文件解析
 aiofiles>=23.2.1                 # 异步文件操作，用于高效处理文件读写
 jinja2>=3.1.2                    # Jinja2 模板引擎，用于动态文本生成和格式化
 beautifulsoup4>=4.12.0           # HTML 解析库，抓取和处理网页内容（联网搜索时使用）
+
+# ── 重排序（Rerank） ─────────────────────────────────────────────────────────────
+sentence-transformers>=2.2.0      # 交叉编码器重排序模型，用于 RAG 检索结果的语义精排

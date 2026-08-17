@@ -1,0 +1,12 @@
+{"id":"live-iron-001","query":"How did 750 mg Fe kg-1 soil affect maize height and biomass?","kb_ids":[12],"relevant_document_ids":[21,23,29,34],"label_basis":"The indexed source documents are duplicate uploads of the iron-toxicity maize study."}
+{"id":"live-iron-002","query":"Which amendment best mitigated iron toxicity in maize?","kb_ids":[12],"relevant_document_ids":[21,23,29,34],"label_basis":"The answer appears in the indexed iron-toxicity maize study."}
+{"id":"live-iron-003","query":"How did bentonite and humic acids affect the maize SPAD index?","kb_ids":[12],"relevant_document_ids":[21,23,29,34],"label_basis":"The answer appears in the indexed iron-toxicity maize study."}
+{"id":"live-verbascum-001","query":"What were the principal constituents of Verbascum wiedemannianum essential oil?","kb_ids":[12],"relevant_document_ids":[22,24,30,35],"label_basis":"The indexed source documents are duplicate uploads of the Verbascum study."}
+{"id":"live-verbascum-002","query":"Which assays measured the antioxidant activity of the Verbascum extract?","kb_ids":[12],"relevant_document_ids":[22,24,30,35],"label_basis":"The assay description appears in the indexed Verbascum study."}
+{"id":"live-verbascum-003","query":"Did the methanol extract show tyrosinase inhibitory activity?","kb_ids":[12],"relevant_document_ids":[22,24,30,35],"label_basis":"The result appears in the indexed Verbascum study."}
+{"id":"live-food-001","query":"冠心病有哪些食疗建议？","kb_ids":[7],"relevant_document_ids":[104],"label_basis":"The query targets the indexed book 吃药不如食疗."}
+{"id":"live-food-002","query":"缺铁性贫血的大枣木耳粥出自哪本食疗书？","kb_ids":[7],"relevant_document_ids":[104],"label_basis":"The recipe is indexed under document 104."}
+{"id":"live-food-003","query":"高血压和糖尿病等现代文明病如何进行饮食调理？","kb_ids":[7],"relevant_document_ids":[104],"label_basis":"The query targets the indexed disease-dietotherapy book."}
+{"id":"live-beauty-001","query":"产后脱发可以从哪些饮食方面调理？","kb_ids":[7],"relevant_document_ids":[106],"label_basis":"The topic is indexed in document 106, 本草纲目中的100条美容经."}
+{"id":"live-beauty-002","query":"荔枝与减少雀斑有什么关系？","kb_ids":[7],"relevant_document_ids":[106],"label_basis":"The relevant passage is indexed in document 106."}
+{"id":"live-beauty-003","query":"本草美容中有哪些女性美白调理内容？","kb_ids":[7],"relevant_document_ids":[106],"label_basis":"The relevant section is indexed in document 106."}

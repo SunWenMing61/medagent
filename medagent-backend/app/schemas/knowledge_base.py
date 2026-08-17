@@ -12,8 +12,8 @@ class KBCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     # 知识库描述，可选
     description: Optional[str] = None
-    # 知识库类型，默认值为 "general"，必须匹配正则：general（通用）、drug（药品）、paper（论文）、chat_history（聊天记录）
-    type: str = Field(default="general", pattern=r"^(general|drug|paper|chat_history)$")
+    # 知识库类型，默认值为 "general"，必须匹配正则：general（通用）、drug（药品）、paper（论文）
+    type: str = Field(default="general", pattern=r"^(general|drug|paper)$")
     # 可见性，默认值为 "private"，必须匹配正则：private（私有）、public（公开）
     visibility: str = Field(default="private", pattern=r"^(private|public)$")
 

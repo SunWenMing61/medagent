@@ -1,4 +1,4 @@
-// 引入 React 及其核心 API：createContext（创建上下文）、useContext（消费上下文）、useState（状态管理）、useEffect（副作用处理）、useCallback（回调函数记忆化）、useRef（引用存储）
+// 引入 React 及其核心 API
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 // 引入 Ant Design 的 ConfigProvider（配置全局主题）和 theme（内置主题算法：浅色/深色）
 import { ConfigProvider, theme } from 'antd';
@@ -274,8 +274,18 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           // 根据实际主题模式选择算法：darkAlgorithm（深色）或 defaultAlgorithm（浅色）
           algorithm: resolvedMode === 'dark' ? theme.darkAlgorithm : theme.defaultAlgorithm,
           token: {
-            colorPrimary: '#1677ff',  // 全局主色：Ant Design 默认蓝色
-            borderRadius: 6,          // 全局圆角大小
+            colorPrimary: '#2563eb',
+            colorSuccess: '#10b981',
+            colorWarning: '#f59e0b',
+            borderRadius: 10,
+            controlHeight: 38,
+            fontFamily: "Inter, 'SF Pro Display', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+          },
+          components: {
+            Card: { borderRadiusLG: 16 },
+            Button: { borderRadius: 10, fontWeight: 500 },
+            Table: { headerBorderRadius: 12 },
+            Modal: { borderRadiusLG: 18 },
           },
         }}
       >

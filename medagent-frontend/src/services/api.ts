@@ -1,8 +1,10 @@
 // 引入 axios 库及其类型定义：AxiosInstance（axios 实例类型）、InternalAxiosRequestConfig（请求配置类型）、AxiosResponse（响应类型）
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
-// API 基础 URL：优先使用环境变量 REACT_APP_API_BASE_URL，未设置则默认回退到本地开发服务器 http://localhost:8000/api
-const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8000/api';
+// 使用当前页面的主机名，避免 localhost/127.0.0.1 混用触发 CORS 失败。
+// 非本机部署可通过 VITE_API_BASE_URL 显式覆盖。
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || '/api';
 
 // 创建 axios 单例实例，统一配置 baseURL、超时时间和默认请求头
 const api: AxiosInstance = axios.create({
@@ -164,7 +166,6 @@ export interface Document {
   file_type?: string;
   file_size?: number;
   content_type?: string;
-  source_id?: number | null;
   source_url?: string | null;
   parse_status?: string;
   vector_status?: string;
@@ -172,6 +173,33 @@ export interface Document {
   created_at?: string;
   updated_at?: string;
   error_message?: string;
+  cleaning_version?: string | null;
+  quality_status?: string | null;
+  processing_task_id?: string | null;
+  processing_progress?: number;
+  processing_message?: string | null;
+}
+
+export interface DocumentProcessingStatus {
+  id: number;
+  parse_status: string;
+  vector_status: string;
+  error_message?: string | null;
+  processing_task_id?: string | null;
+  processing_progress?: number;
+  processing_message?: string | null;
+}
+
+export interface DocumentQualityDetail {
+  document_id: number;
+  cleaning_version?: string | null;
+  quality_status: string;
+  report: Record<string, any>;
+  pages: Array<Record<string, any>>;
+  raw_blocks: Array<Record<string, any>>;
+  clean_blocks: Array<Record<string, any>>;
+  tables: Array<Record<string, any>>;
+  cleaning_actions: Array<Record<string, any>>;
 }
 
 // 上传文档到指定知识库，POST /documents/upload，使用 multipart/form-data 格式
@@ -180,10 +208,10 @@ export const uploadDocument = async (kbId: number, file: File): Promise<Document
   formData.append('kb_id', String(kbId));  // 知识库 ID 转为字符串追加到表单
   formData.append('file', file);            // 上传的文件
 
-  // 发送 POST 请求，指定 Content-Type 为 multipart/form-data，超时时间延长为 120 秒（大文件上传）
+  // PDF 不限制大小，上传请求不使用 Axios 客户端超时；进度和后续解析由文档任务状态展示。
   const response = await api.post('/documents/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000,
+    timeout: 0,
   });
   return response.data;
 };
@@ -200,6 +228,40 @@ export const deleteDocument = async (id: number): Promise<void> => {
   await api.delete(`/documents/${id}`);
 };
 
+// 复用已保存的文本解析检查点，仅重试失败的分块/向量化流程。
+export const retryDocumentProcessing = async (id: number): Promise<DocumentProcessingStatus> => {
+  const response = await api.post(`/documents/${id}/retry`);
+  return response.data;
+};
+
+export interface VectorStoreRebuildResult {
+  kb_id: number;
+  scheduled: number;
+  skipped_active: number;
+  document_ids: number[];
+  message: string;
+}
+
+// 使用最新 PDF/表格/视觉解析能力重新解析知识库文档，并迭代替换 pgvector 向量。
+export const rebuildKnowledgeBaseVectors = async (kbId: number): Promise<VectorStoreRebuildResult> => {
+  const response = await api.post(`/documents/kb/${kbId}/rebuild-vectors`);
+  return response.data;
+};
+
+export const getDocumentQuality = async (id: number): Promise<DocumentQualityDetail> => {
+  const response = await api.get(`/documents/${id}/quality`);
+  return response.data;
+};
+
+export const reviewDocumentQuality = async (
+  id: number,
+  decision: 'approve' | 'reject',
+  comment?: string,
+): Promise<{ id: number; parse_status: string; vector_status: string }> => {
+  const response = await api.post(`/documents/${id}/quality/review`, { decision, comment });
+  return response.data;
+};
+
 // ==================== 聊天相关 API ====================
 
 // 聊天请求参数接口：包含问题文本、关联的知识库 ID 列表、可选的会话 ID
@@ -207,6 +269,7 @@ export interface ChatRequest {
   question: string;
   kb_ids: number[];
   session_id?: string;
+  assistant_profile?: 'general_qa' | 'memory_qa';
 }
 
 // 聊天响应接口：包含回答文本、参考文献列表、安全标记、免责声明、思考过程
@@ -216,7 +279,43 @@ export interface ChatResponse {
   safety_flag?: boolean;
   disclaimer?: string;
   thinking?: string;
+  assistant_profile?: string;
+  cache_hit?: boolean;
+  cache_age_seconds?: number;
+  cache_lookup_latency_ms?: number;
+  answer_variants?: AnswerVariant[];
+  recommended_variant_id?: string;
+  message_id?: number;
 }
+
+export interface AnswerVariant {
+  variant_id: string;
+  style: 'concise_evidence' | 'detailed_guidance';
+  label: string;
+  agent_name: string;
+  request_id?: string;
+  answer: string;
+  citations?: any[];
+  safety_status: string;
+  evidence_basis_id?: string;
+  evidence_ids?: string[];
+  evidence_count?: number;
+}
+
+export interface AssistantProfile {
+  profile_id: 'general_qa' | 'memory_qa';
+  name: string;
+  description: string;
+  session_memory_enabled: boolean;
+  long_term_memory_enabled: boolean;
+  auto_web_search: boolean;
+  intended_use: string;
+}
+
+export const getAssistantProfiles = async (): Promise<{ default: string; items: AssistantProfile[] }> => {
+  const response = await api.get('/chat/assistants');
+  return response.data;
+};
 
 // 会话概要信息接口：包含 ID、标题、会话类型、时间戳、消息数、关联知识库 ID 列表
 export interface Session {
@@ -247,6 +346,9 @@ export interface Message {
   feedback_type?: string | null;
   created_at?: string;
   thinking?: string;
+  answer_variants_json?: AnswerVariant[];
+  recommended_variant_id?: string;
+  selected_variant_id?: string;
 }
 
 // 发送问答请求（非流式），POST /chat/ask
@@ -258,30 +360,6 @@ export const askQuestion = async (params: ChatRequest): Promise<ChatResponse> =>
 // 发送健康咨询请求（非流式），POST /chat/health
 export const healthConsult = async (params: ChatRequest): Promise<ChatResponse> => {
   const response = await api.post('/chat/health', params);
-  return response.data;
-};
-
-// 发送带文件附件的多部分问答请求（支持图片/PDF/DOCX 等），POST /chat/ask-multipart
-// 参数：问题文本、知识库 ID 列表、文件数组、可选会话 ID、联网搜索开关、深度思考开关
-export const askQuestionMultipart = async (
-  question: string,
-  kb_ids: number[],
-  files: File[],
-  session_id?: number,
-  web_search_enabled?: boolean,
-  deep_thinking_enabled?: boolean,
-): Promise<ChatResponse> => {
-  const formData = new FormData();
-  formData.append('question', question);
-  formData.append('web_search_enabled', web_search_enabled ? 'true' : 'false');
-  formData.append('deep_thinking_enabled', deep_thinking_enabled ? 'true' : 'false');
-  formData.append('kb_ids', JSON.stringify(kb_ids));  // 知识库 ID 列表序列化为 JSON 字符串
-  if (session_id !== undefined) formData.append('session_id', String(session_id));
-  files.forEach((f) => formData.append('files', f));  // 每个文件作为一个表单字段
-  const response = await api.post('/chat/ask-multipart', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 120000,  // 文件上传超时时间 120 秒
-  });
   return response.data;
 };
 
@@ -316,6 +394,24 @@ export const submitFeedback = async (params: FeedbackParams): Promise<any> => {
   const response = await api.post('/feedback', params);
   return response.data;
 };
+
+export interface AnswerPreferenceProfile {
+  preferred_style: 'concise_evidence' | 'detailed_guidance';
+  preference_strength: number;
+  concise_votes: number;
+  detailed_votes: number;
+  total_choices: number;
+  profile_version: number;
+}
+
+export const submitAnswerPreference = async (
+  messageId: number,
+  chosenVariantId: string,
+): Promise<{ message_id: number; chosen_variant_id: string; changed: boolean; profile: AnswerPreferenceProfile }> =>
+  (await api.post('/feedback/preference', { message_id: messageId, chosen_variant_id: chosenVariantId })).data;
+
+export const getAnswerPreferenceProfile = async (): Promise<AnswerPreferenceProfile> =>
+  (await api.get('/feedback/preference/profile')).data;
 
 // ==================== 管理员相关 API ====================
 
@@ -415,101 +511,39 @@ export const updateModelConfig = async (config: ModelConfig): Promise<ModelConfi
   return response.data;
 };
 
-// ==================== 知识来源（在线爬取）相关 API ====================
+export interface ToolHealth {
+  tool_name: string;
+  status: string;
+  last_success_at?: string | null;
+  error_rate_5m: number;
+  p95_latency_ms: number;
+  circuit_state: string;
+}
 
-// 知识来源信息接口：包含 ID、所属知识库 ID、来源类型（如网页爬虫）、名称、配置、同步状态、文档数等
-export interface KnowledgeSource {
-  id: number;
-  kb_id: number;
-  source_type: string;
+export interface GovernedTool {
   name: string;
-  config: Record<string, any>;
-  sync_status: string;
-  document_count?: number;
-  last_sync_at?: string;
-  error_message?: string;
-  created_at?: string;
-  updated_at?: string;
+  version: string;
+  description: string;
+  category: string;
+  enabled: boolean;
+  read_only: boolean;
+  risk_level: string;
+  allowed_agents: string[];
+  required_scopes: string[];
+  timeout_seconds: number;
+  max_retries: number;
+  max_calls_per_run: number;
+  cache_ttl_seconds?: number | null;
+  health: ToolHealth;
 }
 
-// 创建知识来源的请求参数接口
-export interface CreateSourceParams {
-  kb_id: number;
-  source_type: string;
-  name: string;
-  config: Record<string, any>;
-}
-
-// 更新知识来源的请求参数接口（部分更新）
-export interface UpdateSourceParams {
-  name?: string;
-  config?: Record<string, any>;
-  kb_id?: number;
-}
-
-// 知识来源类型的模式信息接口：描述每种来源类型的字段配置结构
-export interface SourceSchemaInfo {
-  source_type: string;
-  display_name: string;
-  config_schema: Record<string, any>;
-  defaults: Record<string, any>;
-}
-
-// 知识来源的状态信息接口
-export interface SourceStatus {
-  id: number;
-  sync_status: string;
-  last_sync_at?: string;
-  error_message?: string;
-}
-
-// 获取所有可用的知识来源类型及其配置模式，GET /sources/schemas
-export const getSourceSchemas = async (): Promise<Record<string, SourceSchemaInfo>> => {
-  const response = await api.get('/sources/schemas');
+export const getGovernedTools = async (): Promise<GovernedTool[]> => {
+  const response = await api.get('/admin/tools');
   return response.data;
 };
 
-// 创建新的知识来源，POST /sources
-export const createSource = async (params: CreateSourceParams): Promise<KnowledgeSource> => {
-  const response = await api.post('/sources', params);
-  return response.data;
-};
-
-// 获取知识来源列表，可选按知识库 ID 过滤，GET /sources?kb_id={kbId}
-export const getSources = async (kbId?: number): Promise<KnowledgeSource[]> => {
-  const params = kbId ? { kb_id: kbId } : {};
-  const response = await api.get('/sources', { params });
-  return response.data;
-};
-
-// 获取单个知识来源的详细信息，GET /sources/{id}
-export const getSource = async (id: number): Promise<KnowledgeSource> => {
-  const response = await api.get(`/sources/${id}`);
-  return response.data;
-};
-
-// 更新指定知识来源的配置，PUT /sources/{id}
-export const updateSource = async (id: number, params: UpdateSourceParams): Promise<KnowledgeSource> => {
-  const response = await api.put(`/sources/${id}`, params);
-  return response.data;
-};
-
-// 删除指定知识来源，DELETE /sources/{id}，返回删除结果信息及关联文档数
-export const deleteSource = async (id: number): Promise<{ message: string; deleted_documents: number }> => {
-  const response = await api.delete(`/sources/${id}`);
-  return response.data;
-};
-
-// 触发指定知识来源的同步操作，POST /sources/{id}/sync，返回来源 ID 和同步状态
-export const triggerSourceSync = async (id: number): Promise<{ source_id: number; sync_status: string }> => {
-  const response = await api.post(`/sources/${id}/sync`);
-  return response.data;
-};
-
-// 获取指定知识来源的同步状态，GET /sources/{id}/status
-export const getSourceStatus = async (id: number): Promise<SourceStatus> => {
-  const response = await api.get(`/sources/${id}/status`);
-  return response.data;
+export const setGovernedToolEnabled = async (name: string, enabled: boolean): Promise<void> => {
+  await api.post(`/admin/tools/${encodeURIComponent(name)}/enabled`, undefined, { params: { enabled } });
 };
 
 // ==================== 文档预览相关 API ====================
@@ -540,3 +574,114 @@ export const getDocumentPreview = async (id: number): Promise<DocumentPreviewDat
 export { api };
 // 默认导出 api 实例（默认导出），方便直接引用
 export default api;
+
+// ==================== Agent Memory / Retrieval observability ====================
+
+export interface AgentMemoryItem {
+  memory_id: string;
+  category: string;
+  subject: string;
+  predicate: string;
+  value: string | Record<string, unknown>;
+  sensitivity: string;
+  status: string;
+  confidence: number;
+  importance: number;
+  expires_at?: string | null;
+  version: number;
+  can_support_medical_claim: false;
+}
+
+export const getAgentMemories = async (): Promise<AgentMemoryItem[]> =>
+  (await api.get('/memory')).data;
+
+export const createAgentMemory = async (data: {
+  category: string; subject: string; predicate: string; value: string;
+  sensitivity: string; expires_at?: string | null;
+}): Promise<AgentMemoryItem> => (await api.post('/memory', data)).data;
+
+export const deleteAgentMemory = async (id: string): Promise<void> => {
+  await api.delete(`/memory/${id}`);
+};
+
+export const clearAgentMemory = async (): Promise<{ deleted_count: number }> =>
+  (await api.post('/memory/clear')).data;
+
+export interface MemorySettings {
+  long_term_memory_enabled: boolean;
+  medical_sensitive_memory_enabled: boolean;
+}
+
+export const getMemorySettings = async (): Promise<MemorySettings> =>
+  (await api.get('/memory/settings')).data;
+export const setLongTermMemory = async (enabled: boolean): Promise<void> => {
+  await api.post(`/memory/${enabled ? 'enable' : 'disable'}`);
+};
+export const setMedicalSensitiveMemory = async (enabled: boolean): Promise<MemorySettings> =>
+  (await api.patch('/memory/settings', undefined, { params: { medical_sensitive_memory_enabled: enabled } })).data;
+
+export const getRetrievalTrace = async (requestId: string): Promise<Record<string, any>> =>
+  (await api.get(`/retrieval/debug/${encodeURIComponent(requestId)}`)).data;
+export const getRetrievalMetrics = async (): Promise<{
+  sample_size: number; status_counts: Record<string, number>; p95_latency_ms: number; average_evidence_count: number;
+}> => (await api.get('/retrieval/metrics')).data;
+
+export interface HybridRetrievalComparison {
+  generated_at: string;
+  dataset: {
+    version: string;
+    sha256: string;
+    case_count: number;
+    category_count: number;
+    categories: string[];
+    clinical_validity: boolean;
+    contains_patient_data: boolean;
+    description?: string;
+  };
+  baseline: {
+    strategy: string;
+    metrics: Record<string, number>;
+    by_category: Record<string, Record<string, number>>;
+  };
+  candidate: {
+    strategy: string;
+    metrics: Record<string, number>;
+    by_category: Record<string, Record<string, number>>;
+  };
+  improvement: { absolute: Record<string, number>; relative: Record<string, number | null> };
+  per_case: Array<{
+    case_id: string;
+    category: string;
+    query: string;
+    relevant: string[];
+    baseline_first_relevant_rank: number;
+    hybrid_first_relevant_rank: number;
+  }>;
+}
+
+export const getHybridRetrievalComparison = async (): Promise<HybridRetrievalComparison> =>
+  (await api.get('/retrieval/evaluation/hybrid-comparison')).data;
+
+export interface StandardAnswerCacheMetrics {
+  enabled: boolean;
+  backend: string;
+  ttl_seconds: number;
+  requests: number;
+  eligible_requests: number;
+  hits: number;
+  misses: number;
+  stores: number;
+  hit_rate: number;
+  average_cold_latency_ms: number;
+  average_hit_latency_ms: number;
+  response_speed_improvement: number;
+  model_calls_executed: number;
+  model_calls_avoided: number;
+  estimated_model_call_reduction: number;
+  estimated_latency_saved_ms: number;
+  stampede_wait_hits: number;
+  stampede_wait_timeouts: number;
+}
+
+export const getStandardAnswerCacheMetrics = async (): Promise<StandardAnswerCacheMetrics> =>
+  (await api.get('/chat/cache/metrics')).data;

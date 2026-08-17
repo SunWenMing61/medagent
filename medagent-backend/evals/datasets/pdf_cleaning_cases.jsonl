@@ -1,0 +1,12 @@
+{"id":"clean-001","raw":"SpO₂ ≥ 95%，eGFR 60 mL/min","expected":"SpO₂ ≥ 95%,eGFR 60 mL/min","method":"native","confidence":1.0,"focus":"medical_symbols"}
+{"id":"clean-002","raw":"The micro-\nvascular complication was documented.","expected":"The microvascular complication was documented.","method":"native","confidence":1.0,"focus":"hyphenation"}
+{"id":"clean-003","raw":"A dose-\ndependent response was observed.","expected":"A dose-dependent response was observed.","method":"native","confidence":1.0,"focus":"hyphenation"}
+{"id":"clean-004","raw":"Initial dose O.5 mg once daily.","expected":"Initial dose 0.5 mg once daily.","method":"ocr","confidence":0.78,"focus":"ocr_numeric"}
+{"id":"clean-005","raw":"Maximum dose l0 mg daily.","expected":"Maximum dose 10 mg daily.","method":"ocr","confidence":0.74,"focus":"ocr_numeric"}
+{"id":"clean-006","raw":"Administer 25 u g intravenously.","expected":"Administer 25 μg intravenously.","method":"ocr","confidence":0.81,"focus":"medical_symbols"}
+{"id":"clean-007","raw":"血压​应控制在 130/80 mmHg 以下。","expected":"血压应控制在 130/80 mmHg 以下。","method":"native","confidence":1.0,"focus":"unicode_whitespace"}
+{"id":"clean-008","raw":"患者无发热\n无胸痛，生命体征平稳。","expected":"患者无发热无胸痛,生命体征平稳。","method":"native","confidence":1.0,"focus":"line_merge"}
+{"id":"clean-009","raw":"β受体阻滞剂 ± 利尿剂","expected":"β受体阻滞剂 ± 利尿剂","method":"native","confidence":1.0,"focus":"medical_symbols"}
+{"id":"clean-010","raw":"Na⁺ 140 mmol/L，K⁺ 4.2 mmol/L","expected":"Na⁺ 140 mmol/L,K⁺ 4.2 mmol/L","method":"native","confidence":1.0,"focus":"medical_symbols"}
+{"id":"clean-011","raw":"白细胞 6.2 × 10⁹/L\n血红蛋白 132 g/L。","expected":"白细胞 6.2 × 10⁹/L 血红蛋白 132 g/L。","method":"native","confidence":1.0,"focus":"line_merge"}
+{"id":"clean-012","raw":"Follow-up was scheduled in 4 weeks.","expected":"Follow-up was scheduled in 4 weeks.","method":"native","confidence":1.0,"focus":"no_regression"}

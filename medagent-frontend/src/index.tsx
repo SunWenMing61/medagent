@@ -6,6 +6,7 @@ import ReactDOM from 'react-dom/client';
 import { ThemeProvider } from './contexts/ThemeContext';
 // 引入根组件 App，包含路由和页面布局的顶层定义
 import App from './App';
+import './styles/global.css';
 
 // 使用 createRoot 创建 React 18 的并发模式根节点，替代旧的 ReactDOM.render
 // 获取 index.html 中 id 为 "root" 的 DOM 元素作为挂载点，断言为 HTMLElement 类型

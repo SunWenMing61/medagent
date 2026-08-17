@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 # 从 Python 标准库导入 datetime，用于时间戳字段类型
 from datetime import datetime
 # 从 typing 导入 Optional（可选类型）、List（列表类型）、Any（任意类型）
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Literal
 
 
 class AskRequest(BaseModel):
@@ -14,10 +14,7 @@ class AskRequest(BaseModel):
     kb_ids: Optional[List[int]] = None
     # 可选的会话 ID，如果不提供则创建新会话
     session_id: Optional[int] = None
-    # 是否启用联网搜索，默认为 False
-    web_search_enabled: bool = False
-    # 是否启用深度思考模式，默认为 False
-    deep_thinking_enabled: bool = False
+    assistant_profile: Literal["general_qa", "memory_qa"] = "memory_qa"
 
 
 class AskResponse(BaseModel):
@@ -34,6 +31,13 @@ class AskResponse(BaseModel):
     safety_flag: Optional[str] = None
     # 可选的免责声明文本
     disclaimer: Optional[str] = None
+    assistant_profile: str = "memory_qa"
+    cache_hit: bool = False
+    cache_age_seconds: Optional[float] = None
+    cache_lookup_latency_ms: Optional[float] = None
+    answer_variants: List[dict] = Field(default_factory=list)
+    recommended_variant_id: Optional[str] = None
+    message_id: Optional[int] = None
 
 
 class SessionResponse(BaseModel):
@@ -74,6 +78,9 @@ class MessageResponse(BaseModel):
     references_json: Optional[Any] = None
     # 安全标记，可为空
     safety_flag: Optional[str] = None
+    answer_variants_json: Optional[List[dict]] = None
+    recommended_variant_id: Optional[str] = None
+    selected_variant_id: Optional[str] = None
     # 创建时间，可为空
     created_at: Optional[datetime] = None
 

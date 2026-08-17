@@ -19,6 +19,7 @@ import {
   Statistic,
   Tooltip,
   Modal,
+  Progress,
   theme,
 } from 'antd';
 // 从 Ant Design 图标库导入：上传、删除、刷新、文件、收件箱、PDF、文本文档、勾选、关闭、同步、预览等图标
@@ -34,6 +35,7 @@ import {
   CloseCircleOutlined,
   SyncOutlined,
   EyeOutlined,
+  FolderOpenOutlined,
 } from '@ant-design/icons';
 // 从 Ant Design 导入 Upload 组件相关的类型定义
 import type { UploadFile, UploadProps } from 'antd';
@@ -45,12 +47,19 @@ import {
   getKnowledgeBases,
   uploadDocument,
   deleteDocument,
+  retryDocumentProcessing,
+  rebuildKnowledgeBaseVectors,
   getDocumentFileBlobUrl,
   getDocumentPreview,
   type Document,
   type KnowledgeBase,
   type DocumentPreviewData,
 } from '../services/api';
+import {
+  getDocumentPipelineStatus,
+  getDocumentProgress,
+  getDocumentProgressMessage,
+} from '../utils/documentProcessing';
 // 导入 ReactMarkdown Markdown 渲染组件
 import ReactMarkdown from 'react-markdown';
 // 导入 remark-gfm 插件（支持 GFM：表格、任务列表等）
@@ -83,6 +92,8 @@ const DocumentManagement: React.FC = () => {
   const [allDocs, setAllDocs] = useState<Document[]>([]);
   // 批量上传的文件列表
   const [uploadFileList, setUploadFileList] = useState<UploadFile[]>([]);
+  const [retryingDocumentIds, setRetryingDocumentIds] = useState<number[]>([]);
+  const [rebuildingVectorStore, setRebuildingVectorStore] = useState(false);
 
   // 文档预览相关状态
   const [previewVisible, setPreviewVisible] = useState(false);  // 预览弹窗是否可见
@@ -118,15 +129,15 @@ const DocumentManagement: React.FC = () => {
   }, [kbId]);
 
   // 获取指定知识库下文档列表的回调函数
-  const fetchDocs = useCallback(async (kbId?: number) => {
-    setLoading(true);
+  const fetchDocs = useCallback(async (kbId?: number, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getDocuments(kbId); // 调用 API 获取文档，传 kbId 过滤
       setDocs(data); // 更新文档列表
     } catch {
       antMessage.error('获取文档列表失败');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -151,6 +162,23 @@ const DocumentManagement: React.FC = () => {
     fetchDocs(selectedKbId);
   }, [selectedKbId, fetchDocs]);
 
+  // 只在存在待处理/处理中任务时轮询，避免空闲页面持续发请求。
+  const hasActiveDocuments = docs.some((doc) => {
+    const activeStatus = ['pending', 'processing'].includes(getDocumentPipelineStatus(doc));
+    // Redis 暂时不可用时尚无 task_id，但 pending 文档仍需轮询等待 Outbox 恢复。
+    // 旧数据中没有 task_id 且长期停在 vector=processing 的记录不应永久轮询。
+    return activeStatus && (Boolean(doc.processing_task_id) || doc.parse_status === 'pending');
+  });
+
+  useEffect(() => {
+    if (!hasActiveDocuments) return;
+    const interval = window.setInterval(() => {
+      fetchDocs(selectedKbId, true);
+      fetchAllDocs();
+    }, 3000);
+    return () => window.clearInterval(interval);
+  }, [hasActiveDocuments, selectedKbId, fetchDocs, fetchAllDocs]);
+
   // 处理单个文件上传：验证格式和大小后调用 API
   const handleUpload = async (file: File) => {
     // 没有选中知识库时不允许上传
@@ -173,10 +201,11 @@ const DocumentManagement: React.FC = () => {
       return false;
     }
 
-    // 验证文件大小：单个文件不超过 20MB
-    const isLessThan20M = file.size / 1024 / 1024 < 20;
-    if (!isLessThan20M) {
-      antMessage.error('文件大小不能超过 20MB');
+    // PDF 不限制大小；其它文档保留 50MB 限制。
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isWithinNonPdfLimit = file.size / 1024 / 1024 <= 50;
+    if (!isPdf && !isWithinNonPdfLimit) {
+      antMessage.error('非 PDF 文件大小不能超过 50MB');
       return false;
     }
 
@@ -240,6 +269,58 @@ const DocumentManagement: React.FC = () => {
     }
   };
 
+  const handleRetry = async (doc: Document) => {
+    setRetryingDocumentIds((ids) => [...ids, doc.id]);
+    try {
+      await retryDocumentProcessing(doc.id);
+      antMessage.success(`「${doc.filename}」已进入重试队列，将复用已有解析结果`);
+      await Promise.all([fetchDocs(selectedKbId, true), fetchAllDocs()]);
+    } catch (error: any) {
+      antMessage.error('重试失败: ' + (error.response?.data?.detail || error.message));
+    } finally {
+      setRetryingDocumentIds((ids) => ids.filter((id) => id !== doc.id));
+    }
+  };
+
+  const handleVectorStoreRebuild = () => {
+    if (!selectedKbId) {
+      antMessage.warning('请先选择知识库');
+      return;
+    }
+    const selectedKb = kbs.find((kb) => kb.id === selectedKbId);
+    Modal.confirm({
+      title: '使用新版 PDF 能力迭代向量库？',
+      content: (
+        <div>
+          <p>
+            将重新解析「{selectedKb?.name || `知识库 ${selectedKbId}`}」中的文档，抽取结构化表格并分析复杂图表，
+            然后重新生成向量。处理期间旧向量继续可用，只有新向量完整写入后才会替换。
+          </p>
+          <Text type="secondary">正在处理的文档会自动跳过，可稍后再次更新。</Text>
+        </div>
+      ),
+      okText: '开始迭代更新',
+      cancelText: '取消',
+      onOk: async () => {
+        setRebuildingVectorStore(true);
+        try {
+          const result = await rebuildKnowledgeBaseVectors(selectedKbId);
+          if (result.scheduled > 0) {
+            antMessage.success(result.message);
+          } else {
+            antMessage.info(result.message);
+          }
+          await Promise.all([fetchDocs(selectedKbId, true), fetchAllDocs()]);
+        } catch (error: any) {
+          antMessage.error('向量库更新失败: ' + (error.response?.data?.detail || error.message));
+          throw error;
+        } finally {
+          setRebuildingVectorStore(false);
+        }
+      },
+    });
+  };
+
   // 处理文档预览
   const handlePreview = async (doc: Document) => {
     setPreviewDoc(doc); // 设置当前预览文档
@@ -292,6 +373,9 @@ const DocumentManagement: React.FC = () => {
       completed: 'success',    // 完成（同义词）：绿色
       failed: 'error',         // 失败：红色
       error: 'error',          // 错误：红色
+      review_required: 'warning',
+      approved: 'success',
+      rejected: 'error',
     };
     return colorMap[status?.toLowerCase()] || 'default';
   };
@@ -305,6 +389,9 @@ const DocumentManagement: React.FC = () => {
       completed: '已完成',     // 已完成
       failed: '失败',          // 处理失败
       error: '错误',           // 出错
+      review_required: '待质检',
+      approved: '已批准',
+      rejected: '已拒绝',
     };
     return labelMap[status?.toLowerCase()] || status;
   };
@@ -333,21 +420,16 @@ const DocumentManagement: React.FC = () => {
     return `${(size / (1024 * 1024)).toFixed(1)} MB`; // 大于等于 1MB 显示 MB
   };
 
-  // 判断文档是否为上传文档（没有 source_id 或 source_id 为 0）
-  const isUploaded = (d: Document) => !d.source_id || d.source_id === 0;
   // 构建现有知识库的 ID 集合，用于过滤全量文档
   const existingKbIds = new Set(kbs.map(kb => kb.id));
   // 从全量文档中筛选出属于现有知识库的文档
   const visibleDocs = kbs.length > 0 ? allDocs.filter(d => existingKbIds.has(d.kb_id)) : allDocs;
-  // 进一步筛选出上传文档
-  const uploadedDocs = visibleDocs.filter(isUploaded);
-  // 统计数据：线上文档、上传文档、处理成功、处理中、处理失败
+  // 统计数据：文档总数、处理成功、处理中、处理失败
   const stats = {
-    online: visibleDocs.filter((d) => d.source_id != null && d.source_id > 0).length, // 线上来源文档
-    uploaded: uploadedDocs.length,                                                     // 手动上传文档
-    success: uploadedDocs.filter((d) => (d.parse_status || d.status) === 'success' || (d.parse_status || d.status) === 'completed').length, // 解析成功
-    processing: uploadedDocs.filter((d) => (d.parse_status || d.status) === 'processing').length, // 解析中
-    failed: uploadedDocs.filter((d) => (d.parse_status || d.status) === 'failed' || (d.parse_status || d.status) === 'error').length, // 解析失败
+    uploaded: visibleDocs.length,                                                      // 文档总数
+    success: visibleDocs.filter((d) => getDocumentPipelineStatus(d) === 'success').length,
+    processing: visibleDocs.filter((d) => ['pending', 'processing'].includes(getDocumentPipelineStatus(d))).length,
+    failed: visibleDocs.filter((d) => getDocumentPipelineStatus(d) === 'failed').length,
   };
 
   // 定义文档表格列配置
@@ -365,26 +447,14 @@ const DocumentManagement: React.FC = () => {
       ),
     },
     {
-      title: '来源',            // 列标题：文档来源
-      key: 'source',
-      width: 100,
-      // 自定义渲染：有 source_id 且大于 0 显示"线上"蓝色标签，否则显示"上传"绿色标签
-      render: (_: any, record: Document) => {
-        if (record.source_id != null && record.source_id > 0) {
-          return <Tag icon={<SyncOutlined />} color="blue">线上</Tag>;
-        }
-        return <Tag icon={<UploadOutlined />} color="green">上传</Tag>;
-      },
-    },
-    {
       title: '类型',            // 列标题：文件类型
       dataIndex: 'file_type',
       key: 'file_type',
       width: 90,
-      // 自定义渲染：无类型显示 "-"，source_text 类型显示"文本"
+      // 自定义渲染：无类型显示 "-"
       render: (type: string) => {
         if (!type) return <Tag>-</Tag>;
-        return <Tag>{type === 'source_text' ? '文本' : type}</Tag>;
+        return <Tag>{type}</Tag>;
       },
     },
     {
@@ -403,13 +473,45 @@ const DocumentManagement: React.FC = () => {
       width: 120,
       // 显示带图标和颜色的状态标签，鼠标悬停显示错误信息
       render: (_: any, record: Document) => {
-        const value = record.parse_status || record.status || 'pending';
+        const value = getDocumentPipelineStatus(record);
         return (
           <Tooltip title={record.error_message || ''}>
             <Tag icon={getStatusIcon(value)} color={getStatusColor(value)}>
               {getStatusLabel(value)}
             </Tag>
           </Tooltip>
+        );
+      },
+    },
+    {
+      title: '处理进度',
+      key: 'progress',
+      width: 230,
+      render: (_: any, record: Document) => {
+        const progress = getDocumentProgress(record);
+        const pipelineStatus = getDocumentPipelineStatus(record);
+        const failed = pipelineStatus === 'failed';
+        const completed = pipelineStatus === 'success';
+        const message = getDocumentProgressMessage(record);
+        return (
+          <div style={{ minWidth: 180 }}>
+            <Progress
+              percent={progress}
+              size="small"
+              status={failed ? 'exception' : completed ? 'success' : 'active'}
+              format={(percent) => `${percent ?? 0}%`}
+              style={{ marginBottom: 0 }}
+            />
+            <Tooltip title={message}>
+              <Text
+                type="secondary"
+                ellipsis
+                style={{ display: 'block', maxWidth: 210, fontSize: 12 }}
+              >
+                {message}
+              </Text>
+            </Tooltip>
+          </div>
         );
       },
     },
@@ -425,7 +527,7 @@ const DocumentManagement: React.FC = () => {
     {
       title: '操作',            // 列标题：操作按钮
       key: 'actions',
-      width: 150,
+      width: 230,
       // 预览和删除两个操作按钮
       render: (_: any, record: Document) => (
         <Space>
@@ -433,6 +535,17 @@ const DocumentManagement: React.FC = () => {
           <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handlePreview(record)}>
             预览
           </Button>
+          {getDocumentPipelineStatus(record) === 'failed' && (
+            <Button
+              type="link"
+              size="small"
+              icon={<ReloadOutlined />}
+              loading={retryingDocumentIds.includes(record.id)}
+              onClick={() => handleRetry(record)}
+            >
+              重试处理
+            </Button>
+          )}
           {/* 删除按钮：带 Popconfirm 二次确认弹窗 */}
           <Popconfirm
             title="确认删除"
@@ -472,10 +585,11 @@ const DocumentManagement: React.FC = () => {
         return Upload.LIST_IGNORE; // 忽略该文件，不加入列表
       }
 
-      // 验证文件大小不超过 20MB
-      const isLessThan20M = file.size / 1024 / 1024 < 20;
-      if (!isLessThan20M) {
-        antMessage.error('文件大小不能超过 20MB');
+      // PDF 不限制大小；其它文档保留 50MB 限制。
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+      const isWithinNonPdfLimit = file.size / 1024 / 1024 <= 50;
+      if (!isPdf && !isWithinNonPdfLimit) {
+        antMessage.error('非 PDF 文件大小不能超过 50MB');
         return Upload.LIST_IGNORE;
       }
 
@@ -492,13 +606,14 @@ const DocumentManagement: React.FC = () => {
 
   // 组件 JSX 渲染
   return (
-    <div>
+    <div className="page-shell document-page">
       {/*
         页面头部区域：
         - 左侧"文档管理"标题
         - 右侧：知识库选择器 + 单文件上传按钮 + 刷新按钮
       */}
       <div
+        className="page-toolbar document-toolbar"
         style={{
           display: 'flex',
           justifyContent: 'space-between',
@@ -508,10 +623,14 @@ const DocumentManagement: React.FC = () => {
           gap: 8,
         }}
       >
-        <Title level={4} style={{ margin: 0 }}>
-          文档管理
-        </Title>
-        <Space>
+        <div className="page-title-group">
+          <div className="page-title-icon"><FolderOpenOutlined /></div>
+          <div>
+            <Title level={3} style={{ margin: 0 }}>文档管理</Title>
+            <Text type="secondary">集中管理医学资料，实时查看解析与向量化进度</Text>
+          </div>
+        </div>
+        <Space wrap className="page-toolbar-actions">
           {/*
             知识库选择器：
             - 下拉选择后切换选中知识库
@@ -559,6 +678,16 @@ const DocumentManagement: React.FC = () => {
               上传文档
             </Button>
           </Upload>
+          <Tooltip title="用最新版表格抽取和图表视觉分析重新解析文档，再安全替换向量">
+            <Button
+              icon={<SyncOutlined spin={rebuildingVectorStore} />}
+              loading={rebuildingVectorStore}
+              disabled={!selectedKbId || rebuildingVectorStore}
+              onClick={handleVectorStoreRebuild}
+            >
+              迭代更新向量库
+            </Button>
+          </Tooltip>
           {/*
             刷新按钮：重新加载当前知识库的文档列表
           */}
@@ -573,31 +702,26 @@ const DocumentManagement: React.FC = () => {
 
       {/*
         统计卡片区域：展示所有知识库的文档统计数据
-        包括线上文档数、线下文档数、处理完成、处理中、失败
+        包括文档总数、处理完成、处理中、失败
       */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+      <Row gutter={[16, 16]} className="document-stats" style={{ marginBottom: 20 }}>
         <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic title="线上文档" value={stats.online} suffix="个" valueStyle={{ color: token.colorPrimary }} />
+          <Card size="small" className="metric-card metric-card-primary">
+            <Statistic title="文档总数" value={stats.uploaded} suffix="个" valueStyle={{ color: token.colorPrimary }} />
           </Card>
         </Col>
         <Col xs={12} sm={6} md={4}>
-          <Card size="small">
-            <Statistic title="线下文档" value={stats.uploaded} suffix="个" valueStyle={{ color: token.colorSuccess }} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6} md={4}>
-          <Card size="small">
+          <Card size="small" className="metric-card metric-card-success">
             <Statistic title="处理完成" value={stats.success} valueStyle={{ color: token.colorSuccess }} suffix="个" />
           </Card>
         </Col>
         <Col xs={12} sm={6} md={4}>
-          <Card size="small">
+          <Card size="small" className="metric-card metric-card-processing">
             <Statistic title="处理中" value={stats.processing} valueStyle={{ color: token.colorPrimary }} suffix="个" />
           </Card>
         </Col>
         <Col xs={12} sm={6} md={4}>
-          <Card size="small">
+          <Card size="small" className="metric-card metric-card-error">
             <Statistic title="失败" value={stats.failed} valueStyle={{ color: token.colorError }} suffix="个" />
           </Card>
         </Col>
@@ -610,14 +734,14 @@ const DocumentManagement: React.FC = () => {
         - 选择文件后显示已选数量和操作按钮（清空 / 开始上传）
       */}
       {selectedKbId && (
-        <Card size="small" style={{ marginBottom: 16, background: token.colorBgLayout }}>
+        <Card size="small" className="document-upload-card" style={{ marginBottom: 20, background: token.colorBgLayout }}>
           <Dragger {...uploadProps} style={{ background: token.colorBgContainer }}>
             <p className="ant-upload-drag-icon">
               <InboxOutlined />
             </p>
             <p className="ant-upload-text">点击或拖拽文件到此区域批量上传</p>
             <p className="ant-upload-hint">
-              支持 PDF、DOC、DOCX、TXT、MD 格式，单个文件不超过 20MB
+              支持 PDF、DOC、DOCX、TXT、MD 格式；PDF 不限制大小，其他文件最大 50MB
             </p>
           </Dragger>
           {uploadFileList.length > 0 && (
@@ -657,7 +781,11 @@ const DocumentManagement: React.FC = () => {
         - 无文档：提示"暂无文档，请上传"
         - 有数据：显示文档表格
       */}
-      <Card>
+      <Card
+        className="document-table-card"
+        title={<Space><FileOutlined /><span>文档列表</span></Space>}
+        extra={selectedKbId ? <Text type="secondary">共 {docs.length} 个文档</Text> : null}
+      >
         {loading ? (
           <div style={{ textAlign: 'center', padding: 60 }}>
             <Spin size="large" tip="加载中..." />
@@ -668,6 +796,7 @@ const DocumentManagement: React.FC = () => {
           <Empty description="暂无文档，请上传" />
         ) : (
           <Table
+            className="document-table"
             dataSource={docs}
             columns={columns}
             rowKey="id"
@@ -676,6 +805,7 @@ const DocumentManagement: React.FC = () => {
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 个文档`,
             }}
+            scroll={{ x: 1180 }}
           />
         )}
       </Card>

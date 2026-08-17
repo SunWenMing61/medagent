@@ -172,19 +172,8 @@ def get_stats(
         .scalar()
         or 0
     )
-    # 在线来源文档数（通过在线知识源同步的文档，source_id > 0）
-    online_documents = (
-        db.query(func.count(Document.id))
-        .filter(
-            Document.kb_id.in_(visible_kb_ids),
-            Document.source_id.isnot(None),
-            Document.source_id > 0,
-        )
-        .scalar()
-        or 0
-    )
-    # 手动上传文档数 = 总文档数 - 在线来源文档数
-    uploaded_documents = total_documents - online_documents
+    # 手动上传文档数 = 总文档数（已移除在线知识源，所有文档均为本地上传）
+    uploaded_documents = total_documents
 
     # 统计会话总数和消息总数
     total_sessions = db.query(func.count(ChatSession.id)).scalar() or 0
@@ -211,7 +200,6 @@ def get_stats(
         "total_sessions": total_sessions,
         "total_messages": total_messages,
         "active_users_today": active_users_today,
-        "online_documents": online_documents,
         "uploaded_documents": uploaded_documents,
         # 旧命名（向后兼容）
         "user_count": total_users,

@@ -1,0 +1,9 @@
+.env
+.git
+__pycache__
+.pytest_cache
+*.pyc
+*.log
+uploads
+tests
+Usersswm_0medagentpgvector.zip

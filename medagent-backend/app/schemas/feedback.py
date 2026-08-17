@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 # 从 Python 标准库导入 datetime，用于时间戳字段类型
 from datetime import datetime
 # 从 typing 导入 Optional（可选类型）
-from typing import Optional
+from typing import Any, Optional
 
 
 class FeedbackRequest(BaseModel):
@@ -34,3 +34,15 @@ class FeedbackResponse(BaseModel):
     class Config:
         # 配置允许从 ORM 属性（SQLAlchemy 模型属性）读取数据
         from_attributes = True
+
+
+class AnswerPreferenceRequest(BaseModel):
+    message_id: int = Field(gt=0)
+    chosen_variant_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+
+
+class AnswerPreferenceResponse(BaseModel):
+    message_id: int
+    chosen_variant_id: str
+    changed: bool
+    profile: dict[str, Any]

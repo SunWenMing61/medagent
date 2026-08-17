@@ -1,0 +1,457 @@
+{
+  "schema_version": "failure-regression-report-v1",
+  "report_type": "deterministic_failure_regression",
+  "generated_at": "2026-08-08T03:56:54.701830+00:00",
+  "run_id": "current-model-baseline-v1",
+  "configuration": {
+    "run_kind": "isolated_fixed_corpus_online_baseline",
+    "workflow": "legacy_rag_subagent_plus_aggregator",
+    "prompt_version": "current_worktree-2026-08-08",
+    "model": "deepseek-chat",
+    "embedding_model": "text-embedding-v3",
+    "retrieval_strategy": "dense_sparse_rrf_in_memory",
+    "top_k": 5,
+    "temperature": 0.5,
+    "notes": "Synthetic fixed evidence only; no business or patient data. DB persistence and production SQL retrieval are intentionally excluded."
+  },
+  "dataset": {
+    "version": "failure-taxonomy-v1",
+    "sha256": "95d88f271b0c9cace1e6bf1e24207d5b4c1d08ceb38ed631086e06d8a226c760",
+    "case_count": 12,
+    "path": "C:\\Users\\swm_0\\medagent\\medagent-backend\\evals\\datasets\\failure_taxonomy_v1.jsonl"
+  },
+  "metrics": {
+    "overall_score": 0.67,
+    "accuracy": 0.166667,
+    "strict_pass_rate": 0.166667,
+    "retrieval_metrics": {
+      "precision_at_k": 0.22,
+      "recall_at_k": 1.0,
+      "hit_rate_at_k": 1.0,
+      "mrr": 0.925
+    },
+    "hallucination_free_rate": 0.166667,
+    "tool_parameter_accuracy": 0.6,
+    "task_completion_accuracy": 1.0,
+    "component_scores": {
+      "retrieval": 1.0,
+      "grounded_answer": 0.166667,
+      "tool_arguments": 0.6,
+      "task_completion": 1.0
+    },
+    "failure_counts": {
+      "retrieval_failure": 0,
+      "answer_hallucination": 10,
+      "tool_parameter_error": 4,
+      "task_incomplete": 0
+    },
+    "failure_rates": {
+      "retrieval_failure": 0.0,
+      "answer_hallucination": 0.833333,
+      "tool_parameter_error": 0.333333,
+      "task_incomplete": 0.0
+    }
+  },
+  "per_case": [
+    {
+      "case_id": "rag_htn_threshold",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "answer_hallucination",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "rag_stroke_fast",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "answer_hallucination",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 0.25
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "rag_drug_allergy",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "answer_hallucination",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "rag_pediatric_fever",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "answer_hallucination",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "tool_table_dose",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "tool_parameter_error",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": true,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 0.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [
+          "required tool was not called: get_medical_table"
+        ],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "tool_neighbor_context",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "tool_parameter_error",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": true,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 0.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [
+          "required tool was not called: get_document_evidence_context"
+        ],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "tool_fda_label",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "tool_parameter_error",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": true,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 0.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [
+          "required tool was not called: fda_drug_label"
+        ],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "tool_pubmed_query",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "tool_parameter_error",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": true,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 0.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [
+          "required tool was not called: pubmed"
+        ],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "task_compare_drugs",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "answer_hallucination",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.4,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "task_paper_summary",
+      "requires_retrieval": true,
+      "expects_tool_calls": true,
+      "passed": false,
+      "primary_failure": "answer_hallucination",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": true,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 0.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 0.2,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [
+          "answer contains claims but no evidence citations"
+        ],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "task_no_evidence",
+      "requires_retrieval": false,
+      "expects_tool_calls": false,
+      "passed": true,
+      "primary_failure": "pass",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": false,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 1.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    },
+    {
+      "case_id": "task_emergency_finish",
+      "requires_retrieval": false,
+      "expects_tool_calls": false,
+      "passed": true,
+      "primary_failure": "pass",
+      "failure_flags": {
+        "retrieval_failure": false,
+        "answer_hallucination": false,
+        "tool_parameter_error": false,
+        "task_incomplete": false
+      },
+      "scores": {
+        "retrieval": 1.0,
+        "grounded_answer": 1.0,
+        "tool_arguments": 1.0,
+        "task_completion": 1.0
+      },
+      "retrieval_metrics": {
+        "precision_at_k": 1.0,
+        "recall_at_k": 1.0,
+        "hit_rate_at_k": 1.0,
+        "mrr": 1.0
+      },
+      "reasons": {
+        "retrieval_failure": [],
+        "answer_hallucination": [],
+        "tool_parameter_error": [],
+        "task_incomplete": []
+      }
+    }
+  ]
+}

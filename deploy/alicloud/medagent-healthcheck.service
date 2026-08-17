@@ -1,0 +1,7 @@
+[Unit]
+Description=MedAgent readiness watchdog
+After=medagent-backend.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/medagent/deploy/alicloud/medagent-healthcheck.sh

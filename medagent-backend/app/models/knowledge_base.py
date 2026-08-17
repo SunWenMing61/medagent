@@ -12,6 +12,7 @@ class KnowledgeBase(MySQLBase):
 
     # 主键 ID，自增的大整数
     id = Column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id = Column(BigInteger, nullable=False, default=1, index=True)
     # 知识库名称，不可为空，最大长度 255
     name = Column(String(255), nullable=False)
     # 知识库描述，可为空的文本字段

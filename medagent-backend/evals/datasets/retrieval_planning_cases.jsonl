@@ -1,0 +1,2 @@
+{"id":"plan-001","query":"检索2025年发表的ACE高血压指南","expected_routes":["local_knowledge_base","pubmed"],"preserve_terms":["2025","ACE"]}
+{"id":"plan-002","query":"阿司匹林100 mg有哪些副作用","expected_routes":["local_knowledge_base","fda_drug_label","msd_manual"],"preserve_terms":["100 mg"]}

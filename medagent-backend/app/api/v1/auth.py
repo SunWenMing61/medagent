@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 # 从安全模块导入密码哈希、验证和 JWT 令牌生成函数
 from app.core.security import hash_password, verify_password, create_access_token
-# 从依赖模块导入获取当前登录用户的依赖函数
-from app.core.dependencies import get_current_user
+# 从依赖模块导入获取当前登录用户的依赖函数和速率限制
+from app.core.dependencies import get_current_user, rate_limit
 # 从数据库会话模块导入获取 MySQL 数据库会话的函数
 from app.db.session import get_mysql_db
 # 导入用户模型，用于 ORM 查询
@@ -20,9 +20,13 @@ from app.schemas.common import MessageResponse
 router = APIRouter()
 
 
-# 注册接口：POST /api/auth/register，返回 MessageResponse 类型
+# 注册接口：POST /api/auth/register，返回 MessageResponse 类型（带速率限制）
 @router.post("/register", response_model=MessageResponse)
-def register(req: RegisterRequest, db: Session = Depends(get_mysql_db)):
+def register(
+    req: RegisterRequest,
+    db: Session = Depends(get_mysql_db),
+    _: None = Depends(rate_limit("auth")),
+):
     # 查询数据库中是否已存在同名的用户
     existing = db.query(User).filter(User.username == req.username).first()
     if existing:
@@ -44,9 +48,13 @@ def register(req: RegisterRequest, db: Session = Depends(get_mysql_db)):
     return {"message": "Registration successful"}
 
 
-# 登录接口：POST /api/auth/login，返回 TokenResponse 类型
+# 登录接口：POST /api/auth/login，返回 TokenResponse 类型（带速率限制）
 @router.post("/login", response_model=TokenResponse)
-def login(req: LoginRequest, db: Session = Depends(get_mysql_db)):
+def login(
+    req: LoginRequest,
+    db: Session = Depends(get_mysql_db),
+    _: None = Depends(rate_limit("auth")),
+):
     # 根据用户名查询用户
     user = db.query(User).filter(User.username == req.username).first()
     # 如果用户不存在或密码不匹配，返回 401 未授权错误

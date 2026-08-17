@@ -22,13 +22,11 @@ const MedicalQA: React.FC = () => {
       // 聊天界面标题：显示为 "通用问答"
       title="通用问答"
       // 副标题：简要说明功能范围
-      subtitle="自动检索所有知识库 - 基于知识库的智能问答系统"
+      subtitle="非医学问题由大模型直接回答；医学问题自动融合知识库与互联网证据"
       // API 请求函数：当用户发送消息时调用 askQuestion（向 /chat/ask 发 POST 请求）
       apiFunction={askQuestion}
       // 隐藏知识库选择器（通用问答默认检索所有知识库，不需要用户手动选择）
       hideKBSelector={true}
-      // 流式响应的 SSE 端点路径，用于实时逐字显示 AI 回复
-      streamEndpoint="/chat/ask/stream"
       // 从 URL 参数中获取的初始会话 ID，用于加载特定历史会话
       initialSessionId={initialSessionId}
       // 是否初始显示会话历史列表
@@ -37,6 +35,7 @@ const MedicalQA: React.FC = () => {
       autoLoadLastSession={!initialSessionId}
       // 会话类型标记为 "qa"，用于区分不同类型的会话存储和展示
       sessionType="qa"
+      defaultAssistantProfile="general_qa"
     />
   );
 };

@@ -1,118 +1,104 @@
-# 导入 Optional 类型,用于表示可能为 None 的返回值
-from typing import Optional
+"""Conservative medical-risk triage and generated-output policy."""
 
-# 高风险关键词列表:包含可能表明紧急医疗状况的词语(中英文)
-HIGH_RISK_KEYWORDS = [
-    "chest pain", "difficulty breathing", "shortness of breath", "unconscious",
-    "massive bleeding", "severe allergy", "anaphylaxis", "severe headache",
-    "seizure", "convulsion", "suicide", "self-harm", "高烧", "抽搐",
-    "胸痛", "呼吸困难", "意识不清", "大量出血", "严重过敏",
-    "剧烈头痛", "自伤", "自杀", "儿童高热",
+from __future__ import annotations
+
+import re
+from dataclasses import dataclass
+from enum import Enum
+
+
+class RiskLevel(str, Enum):
+    ROUTINE = "routine"
+    CAUTION = "caution"
+    URGENT = "urgent"
+    EMERGENCY = "emergency"
+    SELF_HARM = "self_harm"
+
+
+@dataclass(slots=True)
+class RiskAssessment:
+    level: RiskLevel
+    matched: list[str]
+
+
+_SELF_HARM = [r"suicid", r"self[- ]?harm", r"kill myself", r"自杀", r"自伤", r"不想活"]
+_EMERGENCY = [
+    r"chest pain", r"胸痛", r"difficulty breathing", r"shortness of breath", r"呼吸困难",
+    r"unconscious", r"意识不清", r"massive bleeding", r"大量出血", r"anaphylaxis",
+    r"严重过敏", r"seizure", r"convulsion", r"抽搐", r"sudden.*severe headache",
+    r"worst headache", r"突发.*剧烈头痛",
 ]
-
-# 医疗边界关键词列表:涉及诊断、处方等超出系统能力范围的行为(中英文)
-MEDICAL_BOUNDARY_KEYWORDS = [
-    "diagnosis", "prescribe", "prescription", "stop medication",
-    "change medication", "adjust dosage", "诊断", "处方",
-    "开药", "停药", "换药", "调整剂量",
+_URGENT = [r"high fever", r"高烧", r"儿童高热", r"persistent vomiting", r"持续呕吐"]
+_BOUNDARY = [
+    r"diagnos", r"prescri", r"stop (taking|your medication)", r"adjust (your )?dosage",
+    r"诊断", r"处方", r"开药", r"停药", r"换药", r"调整剂量",
+]
+_UNSAFE_OUTPUT = [
+    r"\bdiagnosis\s*[:：]", r"诊断\s*[:：]", r"\bprescri(?:be|ption)\b",
+    r"\byou (definitely )?have\b", r"\btake \d+(?:\.\d+)?\s*(?:mg|ml)\b",
+    r"\bstop taking\b", r"\bdiscontinue\b", r"\badjust your dosage\b",
+    r"你(患有|就是).{0,20}(病|症)", r"每天服用\s*\d+", r"立即停药", r"自行调整剂量",
 ]
 
 
 class SafetyService:
-    """安全审查服务,负责检测用户输入中的高风险和越界医疗请求。"""
+    @staticmethod
+    def assess(question: str) -> RiskAssessment:
+        value = question or ""
+        for level, patterns in (
+            (RiskLevel.SELF_HARM, _SELF_HARM),
+            (RiskLevel.EMERGENCY, _EMERGENCY),
+            (RiskLevel.URGENT, _URGENT),
+        ):
+            matched = [pattern for pattern in patterns if re.search(pattern, value, re.IGNORECASE)]
+            if matched:
+                return RiskAssessment(level, matched)
+        return RiskAssessment(RiskLevel.ROUTINE, [])
 
     @staticmethod
-    def check_high_risk(question: str) -> tuple:
-        """
-        检查用户问题是否包含高风险关键词(可能表示紧急医疗状况)。
-
-        Args:
-            question: 用户输入的文本
-
-        Returns:
-            (is_high_risk: bool, matched_keywords: list) 元组,
-            分别表示是否高风险和匹配到的关键词列表
-        """
-        q_lower = question.lower()  # 转为小写以进行不区分大小写的匹配
-        matched = []  # 存储匹配到的关键词
-        for kw in HIGH_RISK_KEYWORDS:
-            if kw.lower() in q_lower:  # 将关键词也转为小写进行比较
-                matched.append(kw)      # 记录匹配的关键词
-        return len(matched) > 0, matched  # 返回是否匹配及匹配列表
+    def check_high_risk(question: str) -> tuple[bool, list[str]]:
+        assessment = SafetyService.assess(question)
+        return assessment.level in {RiskLevel.URGENT, RiskLevel.EMERGENCY, RiskLevel.SELF_HARM}, assessment.matched
 
     @staticmethod
-    def check_medical_boundary(question: str) -> tuple:
-        """
-        检查用户问题是否涉及医疗越界行为(诊断、处方等)。
-
-        Args:
-            question: 用户输入的文本
-
-        Returns:
-            (is_boundary_violation: bool, matched_keywords: list) 元组,
-            分别表示是否越界和匹配到的关键词列表
-        """
-        q_lower = question.lower()  # 转为小写
-        matched = []  # 存储匹配到的关键词
-        for kw in MEDICAL_BOUNDARY_KEYWORDS:
-            if kw.lower() in q_lower:  # 不区分大小写的包含检查
-                matched.append(kw)
-        return len(matched) > 0, matched
+    def check_medical_boundary(question: str) -> tuple[bool, list[str]]:
+        matched = [pattern for pattern in _BOUNDARY if re.search(pattern, question or "", re.IGNORECASE)]
+        return bool(matched), matched
 
     @staticmethod
-    def get_high_risk_response(matched_keywords: list) -> str:
-        """生成高风险警报的回复消息,引导用户立即寻求专业医疗帮助。
+    def check_output(answer: str) -> list[str]:
+        return [pattern for pattern in _UNSAFE_OUTPUT if re.search(pattern, answer or "", re.IGNORECASE)]
 
-        Args:
-            matched_keywords: 匹配到的高风险关键词列表
-
-        Returns:
-            格式化的安全提示信息字符串
-        """
-        keywords = ", ".join(matched_keywords[:5])  # 取前 5 个关键词,用逗号连接
+    @staticmethod
+    def get_high_risk_response(matched_keywords: list[str], level: RiskLevel | None = None) -> str:
+        risk = level or RiskLevel.EMERGENCY
+        if risk == RiskLevel.SELF_HARM:
+            return (
+                "⚠️ **安全提醒**\n\n如果你可能伤害自己，请现在联系所在地的紧急服务或危机干预热线，"
+                "并尽快告诉一位可信任、能陪在你身边的人。请远离可能造成伤害的物品，不要独自承受。"
+                "本系统不能提供危机干预。"
+            )
         return (
-            f"⚠️ **Important Safety Notice**\n\n"
-            f"Your question contains keywords that may indicate an urgent medical situation: **{keywords}**.\n\n"
-            f"🚨 **Please seek immediate medical attention:**\n"
-            f"- Call emergency services (120 in China, 911 in US) immediately\n"
-            f"- Go to the nearest emergency room\n"
-            f"- Do not wait for an online response\n\n"
-            f"This system cannot provide emergency medical advice. "
-            f"Please consult a qualified healthcare professional for any medical concerns."
+            "⚠️ **可能需要紧急医疗帮助 / Immediate emergency attention may be needed**\n\n"
+            "你描述的情况可能具有紧急性。请立即联系所在地的紧急医疗服务，或尽快前往最近的急诊。"
+            "如可能，请让他人陪同；不要为了等待在线回答而延误就医。"
+            "本系统无法判断病情，也不能替代现场医疗评估。"
         )
 
     @staticmethod
-    def get_boundary_response(matched_keywords: list) -> str:
-        """生成医疗边界提示的回复消息,说明系统不能做什么。
-
-        Args:
-            matched_keywords: 匹配到的越界关键词列表
-
-        Returns:
-            格式化的边界提示信息字符串
-        """
-        keywords = ", ".join(matched_keywords[:5])  # 取前 5 个关键词
+    def get_boundary_response(matched_keywords: list[str]) -> str:
+        del matched_keywords
         return (
-            f"⚠️ **Notice**\n\n"
-            f"Your question involves: **{keywords}**.\n\n"
-            f"This system is designed for medical knowledge reference only and cannot:\n"
-            f"- Provide a diagnosis\n"
-            f"- Generate a prescription\n"
-            f"- Advise on stopping, changing, or adjusting medication dosage\n"
-            f"- Replace professional medical advice\n\n"
-            f"Please consult a qualified doctor or pharmacist for personalized medical decisions. "
-            f"Your health decisions should always be made in consultation with a healthcare professional."
+            "⚠️ **医疗安全边界**\n\n本系统不能做出个人诊断、开具处方，或建议自行停药、换药和调整剂量。"
+            "请让医生或药师结合病史、检查结果和当前用药进行个体化判断。"
         )
 
     @staticmethod
     def get_disclaimer() -> str:
-        """获取标准的医疗免责声明文本。"""
         return (
-            "**Medical Disclaimer:** This information is for reference and educational purposes only. "
-            "It does not constitute medical advice, diagnosis, or treatment. "
-            "Always consult a qualified healthcare provider with any questions about your health."
+            "**医疗免责声明 / Medical Disclaimer：** 本信息仅用于参考和健康教育，不构成医疗建议、诊断或治疗。"
+            "有关个人健康与用药的决定，请咨询合格的医疗专业人员。"
         )
 
 
-# 全局单例实例,供其他模块直接使用
 safety_service = SafetyService()

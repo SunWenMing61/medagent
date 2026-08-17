@@ -1,0 +1,2 @@
+{"id":"answer-001","query":"高血压管理原则","expected_citation_ids":["ev_1111111111111111"],"evidence":[{"evidence_id":"ev_1111111111111111","content":"高血压管理应结合生活方式干预与专业评估。","source_type":"local_knowledge_base","source_name":"test-guideline","retrieval_score":0.9,"authority_level":8,"is_authorized":true,"is_conversation_memory":false}]}
+{"id":"answer-002","query":"未知问题","expected_citation_ids":[],"evidence":[]}

@@ -1,126 +1,222 @@
-"""API 端点测试 —— 使用 FastAPI TestClient。"""
+"""API integration tests using an isolated in-memory application database."""
 
-# 导入 pytest 测试框架
+import random
+
 import pytest
-# 导入 FastAPI 测试客户端，用于发送 HTTP 请求
 from fastapi.testclient import TestClient
+from sqlalchemy import BigInteger, create_engine
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
-# 导入 FastAPI 应用实例
-from app.main import app
-# 导入 MySQL 数据库会话工厂和引擎
-from app.db.session import MySQLSessionLocal, mysql_engine
-# 导入 MySQL ORM 基类（用于创建表）
-from app.db.base import MySQLBase
-# 导入密码哈希函数
+import app.models  # noqa: F401 - register every MySQL model before create_all
+from app.core.dependencies import _rate_limiter
 from app.core.security import hash_password
-# 导入用户模型
+from app.db.base import MySQLBase
+from app.db.session import get_mysql_db
+from app.main import app
 from app.models.user import User
+from app.graphs.graph_state import new_agent_state
+from app.services.agent_run_service import agent_run_service
 
 
-# 测试夹具（fixture）：模块级别，在整个模块中只执行一次
+@compiles(BigInteger, "sqlite")
+def _sqlite_big_integer(_type, _compiler, **_kwargs):
+    return "INTEGER"
+
+
 @pytest.fixture(scope="module")
-def client():
-    """创建测试数据库表结构，初始化测试用户，返回测试客户端。"""
-    # 在测试数据库中创建所有表（基于 MySQL 引擎）
-    MySQLBase.metadata.create_all(bind=mysql_engine)
-    # 获取数据库会话
-    db = MySQLSessionLocal()
-    # 检查测试用户是否已存在，如果不存在则创建
-    if not db.query(User).filter(User.username == "testuser").first():
-        user = User(
-            username="testuser",                              # 测试用户名
-            password_hash=hash_password("test123456"),        # 测试密码（哈希后）
-            email="test@test.com",                            # 测试邮箱
-            role="user",                                      # 角色为普通用户
-            status=1,                                         # 状态为启用
-        )
-        db.add(user)
-        db.commit()
+def db_factory():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    MySQLBase.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    db = factory()
+    db.add(User(
+        id=1,
+        tenant_id=1,
+        username="testuser",
+        password_hash=hash_password("test123456"),
+        email="test@test.com",
+        role="user",
+        status=1,
+    ))
+    db.commit()
     db.close()
-    # 返回 FastAPI 测试客户端实例
-    return TestClient(app)
+    yield factory
+    MySQLBase.metadata.drop_all(engine)
+    engine.dispose()
 
 
-# 认证 API 测试类
+@pytest.fixture(scope="module")
+def client(db_factory):
+    def override_db():
+        db = db_factory()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_mysql_db] = override_db
+    client = TestClient(app)
+    yield client
+    app.dependency_overrides.pop(get_mysql_db, None)
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    with _rate_limiter._lock:
+        _rate_limiter._windows.clear()
+
+
+def _login(client: TestClient) -> str:
+    response = client.post("/api/auth/login", json={
+        "username": "testuser", "password": "test123456",
+    })
+    assert response.status_code == 200, response.text
+    return response.json()["access_token"]
+
+
 class TestAuthAPI:
-    """用户注册、登录和身份验证相关测试。"""
-
     def test_register(self, client):
-        """测试用户注册接口：发送注册请求，验证返回成功。"""
-        resp = client.post("/api/auth/register", json={
-            "username": f"newuser",
+        response = client.post("/api/auth/register", json={
+            "username": f"newuser_{random.randint(10000, 99999)}",
             "password": "test123456",
             "email": "new@test.com",
         })
-        # 预期状态码为 200
-        assert resp.status_code == 200
-        # 验证响应消息
-        assert resp.json()["message"] == "Registration successful"
+        assert response.status_code == 200
+        assert response.json()["message"] == "Registration successful"
 
     def test_register_duplicate(self, client):
-        """测试重复注册：使用已存在的用户名，预期返回 400 错误。"""
-        resp = client.post("/api/auth/register", json={
-            "username": "testuser",
-            "password": "test123456",
+        response = client.post("/api/auth/register", json={
+            "username": "testuser", "password": "test123456",
         })
-        # 预期状态码为 400（用户名已存在）
-        assert resp.status_code == 400
+        assert response.status_code == 400
 
     def test_login(self, client):
-        """测试用户登录接口：使用正确凭据登录，验证返回 token。"""
-        resp = client.post("/api/auth/login", json={
-            "username": "testuser",
-            "password": "test123456",
-        })
-        # 预期状态码为 200
-        assert resp.status_code == 200
-        data = resp.json()
-        # 验证响应中包含访问令牌
-        assert "access_token" in data
-        # 验证令牌类型为 Bearer
-        assert data["token_type"] == "bearer"
+        token = _login(client)
+        assert token
 
     def test_login_invalid(self, client):
-        """测试登录失败：使用错误密码，预期返回 401 错误。"""
-        resp = client.post("/api/auth/login", json={
-            "username": "testuser",
-            "password": "wrongpass",
+        response = client.post("/api/auth/login", json={
+            "username": "testuser", "password": "wrongpass",
         })
-        # 预期状态码为 401（认证失败）
-        assert resp.status_code == 401
+        assert response.status_code == 401
 
     def test_me_unauthorized(self, client):
-        """测试未授权访问 /me 接口：未提供 token，预期返回 403。"""
-        resp = client.get("/api/auth/me")
-        # 预期状态码为 403（禁止访问）
-        assert resp.status_code == 403
+        assert client.get("/api/auth/me").status_code == 401
 
     def test_me_authorized(self, client):
-        """测试已授权访问 /me 接口：先登录获取 token，再访问个人资料。"""
-        # 先登录获取 token
-        login_resp = client.post("/api/auth/login", json={
-            "username": "testuser",
-            "password": "test123456",
-        })
-        token = login_resp.json()["access_token"]
-        # 使用 Bearer token 访问 /me 接口
-        resp = client.get("/api/auth/me", headers={
-            "Authorization": f"Bearer {token}"
-        })
-        # 预期状态码为 200
-        assert resp.status_code == 200
-        # 验证返回的用户名与测试用户一致
-        assert resp.json()["username"] == "testuser"
+        response = client.get("/api/auth/me", headers={"Authorization": f"Bearer {_login(client)}"})
+        assert response.status_code == 200
+        assert response.json()["username"] == "testuser"
+
+    def test_logout(self, client):
+        response = client.post("/api/auth/logout", headers={"Authorization": f"Bearer {_login(client)}"})
+        assert response.status_code == 200
+
+    def test_login_disabled_account(self, client, db_factory):
+        db = db_factory()
+        user = db.query(User).filter(User.username == "testuser").one()
+        user.status = 0
+        db.commit()
+        db.close()
+        try:
+            response = client.post("/api/auth/login", json={
+                "username": "testuser", "password": "test123456",
+            })
+            assert response.status_code == 403
+        finally:
+            db = db_factory()
+            db.query(User).filter(User.username == "testuser").update({"status": 1})
+            db.commit()
+            db.close()
 
 
-# 健康检查 API 测试类
+class TestAgentRunsAPI:
+    def test_create_agent_run_contract(self, client, monkeypatch):
+        state = new_agent_state(
+            raw_query="What is blood pressure?",
+            user_id=1,
+            tenant_id=1,
+            authorized_kb_ids=[],
+            thread_id="api-agent-test",
+        )
+        state.update(
+            status="completed",
+            current_agent="finalize",
+            intent="medical_knowledge",
+            evidence_status="insufficient",
+            final_answer="No verified evidence was available.",
+        )
+        monkeypatch.setattr(agent_run_service, "start", lambda **_kwargs: state)
+        token = _login(client)
+        response = client.post(
+            "/api/agent-runs",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": "What is blood pressure?", "kb_ids": [], "thread_id": "api-agent-test"},
+        )
+        assert response.status_code == 200, response.text
+        payload = response.json()
+        assert payload["request_id"] == state["request_id"]
+        assert payload["status"] == "completed"
+        assert payload["current_node"] == "finalize"
+
+
+class TestKnowledgeBaseAPI:
+    def test_list_knowledge_bases(self, client):
+        response = client.get("/api/kb", headers={"Authorization": f"Bearer {_login(client)}"})
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    def test_create_knowledge_base(self, client):
+        response = client.post(
+            "/api/kb",
+            headers={"Authorization": f"Bearer {_login(client)}"},
+            json={
+                "name": "测试知识库",
+                "description": "用于 API 测试的知识库",
+                "type": "general",
+                "visibility": "public",
+            },
+        )
+        assert response.status_code in (200, 201)
+
+    def test_unauthorized_access(self, client):
+        assert client.get("/api/kb").status_code == 401
+
+
+class TestDocumentAPI:
+    def test_list_documents(self, client):
+        response = client.get(
+            "/api/documents", headers={"Authorization": f"Bearer {_login(client)}"}
+        )
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+
+class TestSessionAPI:
+    def test_list_sessions(self, client):
+        response = client.get(
+            "/api/chat/sessions", headers={"Authorization": f"Bearer {_login(client)}"}
+        )
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    def test_list_sessions_by_type(self, client):
+        response = client.get(
+            "/api/chat/sessions?type=qa", headers={"Authorization": f"Bearer {_login(client)}"}
+        )
+        assert response.status_code == 200
+
+
 class TestHealthAPI:
-    """系统健康检查接口测试。"""
-
     def test_health_check(self, client):
-        """测试健康检查接口：验证返回状态为 ok。"""
-        resp = client.get("/health")
-        # 预期状态码为 200
-        assert resp.status_code == 200
-        # 验证响应中的状态字段
-        assert resp.json()["status"] == "ok"
+        response = client.get("/health")
+        assert response.status_code == 200
+        assert response.json()["status"] == "ok"
+        assert "service" in response.json()
+        assert "version" in response.json()

@@ -1,0 +1,22 @@
+[Unit]
+Description=MedAgent FastAPI backend
+After=network-online.target mysql.service postgresql.service redis-server.service mongod.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=medagent
+Group=medagent
+WorkingDirectory=/opt/medagent/medagent-backend
+EnvironmentFile=/opt/medagent/medagent-backend/.env
+ExecStart=/opt/medagent/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=0
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

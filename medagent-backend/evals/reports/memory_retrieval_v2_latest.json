@@ -1,0 +1,39 @@
+{
+  "benchmark": "memory_retrieval_v2_deterministic_offline",
+  "generated_at": "2026-08-05T05:11:37.427568+00:00",
+  "clinical_validity": false,
+  "live_model_or_provider_used": false,
+  "dataset": {
+    "retrieval_cases": 10,
+    "memory_cases": 4
+  },
+  "baseline": {
+    "retrieval": {
+      "mrr": 0.45,
+      "hit_rate_at_1": 0.2
+    },
+    "memory": {
+      "mrr": 0.75,
+      "hit_rate_at_1": 0.5
+    },
+    "memory_leakage_case_rate": 1.0
+  },
+  "upgraded": {
+    "retrieval": {
+      "mrr": 1.0,
+      "hit_rate_at_1": 1.0
+    },
+    "memory": {
+      "mrr": 1.0,
+      "hit_rate_at_1": 1.0
+    },
+    "memory_leakage_case_rate": 0.0
+  },
+  "absolute_improvement": {
+    "retrieval_mrr": 0.55,
+    "retrieval_hit_rate_at_1": 0.8,
+    "memory_mrr": 0.25,
+    "memory_leakage_case_rate_reduction": 1.0
+  },
+  "method": "Baseline weighted Dense/Sparse ranking versus Exact+Dense+Sparse RRF; flat unscoped Memory versus tenant/user/source-role filtering."
+}

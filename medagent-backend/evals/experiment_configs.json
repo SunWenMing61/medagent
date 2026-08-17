@@ -1,0 +1,6 @@
+{
+  "A": {"name": "single_prompt_rag", "required_features": ["rag"]},
+  "B": {"name": "rag_single_output_safety", "required_features": ["rag", "output_safety"]},
+  "C": {"name": "supervisor_retrieval_answer_safety", "required_features": ["supervisor", "retrieval", "answer", "output_safety"]},
+  "D": {"name": "controlled_parallel_evidence_dual_safety", "required_features": ["supervisor", "input_safety", "parallel_retrieval", "evidence_verification", "answer", "output_safety"]}
+}

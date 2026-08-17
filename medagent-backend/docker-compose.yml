@@ -1,137 +1,132 @@
-# Docker Compose 配置文件版本（定义文件格式和语法版本）
-version: "3.8"
+x-app-environment: &app-environment
+  ENVIRONMENT: production
+  DATABASE_URL: postgresql://medagent:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/medagent
+  MYSQL_DATABASE_URL: mysql+pymysql://medagent:${MYSQL_PASSWORD:?set MYSQL_PASSWORD}@mysql:3306/medagent
+  REDIS_URL: redis://redis:6379/0
+  STANDARD_ANSWER_CACHE_ENABLED: "true"
+  STANDARD_ANSWER_CACHE_TTL_SECONDS: ${STANDARD_ANSWER_CACHE_TTL_SECONDS:-21600}
+  SESSION_MEMORY_BACKEND: mongodb
+  MONGODB_URL: mongodb://${MONGO_USERNAME:-medagent}:${MONGO_PASSWORD:?set MONGO_PASSWORD}@mongo:27017/medagent?authSource=admin
+  MONGODB_DATABASE: medagent
+  MONGODB_REQUIRED: "true"
+  SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY}
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+  LLM_API_KEY: ${LLM_API_KEY:-}
+  LLM_API_BASE: ${LLM_API_BASE:-https://api.openai.com/v1}
+  LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+  EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:?set EMBEDDING_API_KEY}
+  EMBEDDING_API_BASE: ${EMBEDDING_API_BASE:-https://api.openai.com/v1/embeddings}
+  EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+  EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-1024}
+  UPLOAD_DIR: /app/uploads
+  OCR_MODEL_DIR: /app/.easyocr/models
+  DOCUMENT_QUALITY_ASSESSMENT_ENABLED: "false"
 
-# 定义所有需要启动的服务容器
 services:
-  # MySQL 服务 —— 用于存储关系型数据（用户、知识库、文档、会话记录等）
   mysql:
-    image: mysql:8.0                                          # 使用 MySQL 8.0 官方镜像
+    image: mysql:8.4
     environment:
-      MYSQL_DATABASE: medagent                                # 自动创建的数据库名称
-      MYSQL_USER: medagent                                    # 创建的自定义用户
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-medagent123}          # 自定义用户密码（支持环境变量覆盖，默认 medagent123）
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}    # root 超级用户密码（支持环境变量覆盖）
-    ports:
-      - "3306:3306"                                           # 宿主机 3306 端口映射到容器 3306 端口
+      MYSQL_DATABASE: medagent
+      MYSQL_USER: medagent
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
     volumes:
-      - mysql_data:/var/lib/mysql                             # 持久化 MySQL 数据文件到命名卷
-    restart: unless-stopped                                   # 容器退出时自动重启，除非手动停止
-    healthcheck:                                              # 健康检查配置
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]  # 通过 mysqladmin ping 检查数据库是否存活
-      interval: 10s                                           # 每 10 秒检查一次
-      timeout: 5s                                             # 每次检查超时时间为 5 秒
-      retries: 5                                              # 连续失败 5 次才视为不健康
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  # PostgreSQL 服务 —— 用于存储向量数据（文档片段的向量嵌入，支持 pgvector 相似性搜索）
   postgres:
-    image: pgvector/pgvector:pg16                             # 使用预装 pgvector 扩展的 PostgreSQL 16 镜像
+    image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: medagent                                   # 自动创建的数据库名称
-      POSTGRES_USER: medagent                                 # 创建的自定义用户
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medagent123}    # 用户密码（支持环境变量覆盖）
-    ports:
-      - "5432:5432"                                           # 宿主机 5432 端口映射到容器 5432 端口
+      POSTGRES_DB: medagent
+      POSTGRES_USER: medagent
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
     volumes:
-      - postgres_data:/var/lib/postgresql/data                # 持久化 PostgreSQL 数据文件到命名卷
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medagent"]           # 通过 pg_isready 工具检查 PostgreSQL 是否就绪
+      test: ["CMD-SHELL", "pg_isready -U medagent -d medagent"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  # Redis 服务 —— 用于缓存、任务队列（RQ）和会话管理
   redis:
-    image: redis:7-alpine                                     # 使用基于 Alpine 的 Redis 7 轻量镜像
-    ports:
-      - "6379:6379"                                           # 宿主机 6379 端口映射到容器 6379 端口
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - redis_data:/data                                      # 持久化 Redis 数据（RDB/AOF 文件）到命名卷
+      - redis_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]                      # 通过 redis-cli ping 检查 Redis 是否存活
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
-  # Backend 服务 —— FastAPI 后端应用，提供 REST API 接口
+  mongo:
+    image: mongo:7.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-medagent}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?set MONGO_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--username", "${MONGO_USERNAME:-medagent}", "--password", "${MONGO_PASSWORD:?set MONGO_PASSWORD}", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   backend:
-    build:
-      context: .                                              # 构建上下文为当前目录（medagent-backend）
-      dockerfile: Dockerfile                                  # 使用当前目录下的 Dockerfile 构建
-    ports:
-      - "8000:8000"                                           # 宿主机 8000 端口映射到容器 8000 端口（API 服务端口）
+    build: .
     environment:
-      DATABASE_URL: postgresql://medagent:${POSTGRES_PASSWORD:-medagent123}@postgres:5432/medagent   # PostgreSQL 连接字符串（向量数据库）
-      MYSQL_DATABASE_URL: mysql+pymysql://medagent:${MYSQL_PASSWORD:-medagent123}@mysql:3306/medagent # MySQL 连接字符串（关系型数据库）
-      REDIS_URL: redis://redis:6379/0                        # Redis 连接字符串（使用 0 号数据库）
-      SECRET_KEY: ${SECRET_KEY:-change-this-in-production}    # JWT 签名密钥（生产环境必须修改）
-      LLM_API_KEY: ${LLM_API_KEY:-}                           # 大语言模型 API 密钥（从环境变量读取）
-      LLM_API_BASE: ${LLM_API_BASE:-https://api.openai.com/v1} # LLM API 基础地址（默认 OpenAI）
-      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}                    # 使用的 LLM 模型名称
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}               # 向量嵌入 API 密钥
-      EMBEDDING_API_BASE: ${EMBEDDING_API_BASE:-https://api.openai.com/v1} # 嵌入 API 基础地址
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}          # 使用的嵌入模型名称
-      TOP_K: ${TOP_K:-5}                                      # RAG 检索返回的最相似文档数量（默认 5 条）
-      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.5}      # 向量相似度阈值，低于此值的结果将被过滤（默认 0.5）
-      UPLOAD_DIR: /app/uploads                                # 文件上传存储目录
+      <<: *app-environment
+      RUN_MIGRATIONS: "1"
     volumes:
-      - upload_data:/app/uploads                              # 持久化上传文件的命名卷
-    depends_on:                                               # 服务启动依赖关系
-      mysql:
-        condition: service_healthy                            # 等待 MySQL 健康检查通过后再启动
-      postgres:
-        condition: service_healthy                            # 等待 PostgreSQL 健康检查通过
-      redis:
-        condition: service_healthy                            # 等待 Redis 健康检查通过
-    restart: unless-stopped
-
-  # Worker 服务 —— 后台任务工作进程（处理异步任务，如文档解析、向量化、LLM 调用等）
-  worker:
-    build:
-      context: .                                              # 构建上下文与 backend 相同
-      dockerfile: Dockerfile
-    command: python worker.py                                 # 容器启动时运行 worker.py 脚本（而非 API 服务）
-    environment:
-      # 以下环境变量与 backend 服务完全一致，确保 worker 能访问相同的数据库和 API
-      DATABASE_URL: postgresql://medagent:${POSTGRES_PASSWORD:-medagent123}@postgres:5432/medagent
-      MYSQL_DATABASE_URL: mysql+pymysql://medagent:${MYSQL_PASSWORD:-medagent123}@mysql:3306/medagent
-      REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-change-this-in-production}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_API_BASE: ${LLM_API_BASE:-https://api.openai.com/v1}
-      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
-      EMBEDDING_API_BASE: ${EMBEDDING_API_BASE:-https://api.openai.com/v1}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
-      TOP_K: ${TOP_K:-5}
-      SIMILARITY_THRESHOLD: ${SIMILARITY_THRESHOLD:-0.5}
-      UPLOAD_DIR: /app/uploads
-    volumes:
-      - upload_data:/app/uploads                              # 共享上传文件目录
+      - upload_data:/app/uploads
     depends_on:
-      mysql:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      mysql: {condition: service_healthy}
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build: .
+    command: ["python", "worker.py"]
+    environment:
+      <<: *app-environment
+      RUN_MIGRATIONS: "0"
+    volumes:
+      - upload_data:/app/uploads
+      - ocr_model_data:/app/.easyocr/models
+    depends_on:
+      backend: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      mongo: {condition: service_healthy}
     restart: unless-stopped
 
-  # Frontend 服务 —— React 前端静态文件服务（通过 Nginx 提供）
   frontend:
     build:
-      context: ../medagent-frontend                           # 构建上下文为前端项目目录
-      dockerfile: Dockerfile                                  # 使用前端目录下的 Dockerfile 构建
+      context: ../medagent-frontend
     ports:
-      - "3000:80"                                             # 宿主机 3000 端口映射到容器 80 端口（Nginx 服务端口）
+      - "3000:8080"
     depends_on:
-      - backend                                               # 依赖 backend 服务（但不等待健康检查）
+      backend: {condition: service_healthy}
     restart: unless-stopped
 
-# 定义命名卷（持久化存储，容器删除后数据仍然保留）
 volumes:
-  mysql_data:              # MySQL 数据卷
-  postgres_data:           # PostgreSQL 数据卷
-  redis_data:              # Redis 数据卷
-  upload_data:             # 上传文件数据卷
+  mysql_data:
+  postgres_data:
+  redis_data:
+  mongo_data:
+  upload_data:
+  ocr_model_data:

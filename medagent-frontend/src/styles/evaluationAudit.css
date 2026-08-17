@@ -1,0 +1,10 @@
+/* The old panel mapped unrelated global metrics to runtime modes and therefore
+   looked like a per-mode quality breakdown. Hide it until true grouped metrics
+   are collected by execution_mode. */
+.quality-grid > .ant-card:first-child {
+  display: none;
+}
+
+.quality-grid {
+  grid-template-columns: minmax(0, 1fr);
+}

@@ -1,0 +1,10 @@
+{"id":"tool-001","intent":"drug_information","agent":"retrieval","scopes":["kb:read","online:read"],"online":true,"risk":"low","expected":["local_knowledge_base","fda_drug_label","msd_manual"]}
+{"id":"tool-002","intent":"drug_information","agent":"retrieval","scopes":["kb:read"],"online":false,"risk":"low","expected":["local_knowledge_base"]}
+{"id":"tool-003","intent":"literature_search","agent":"retrieval","scopes":["kb:read","online:read"],"online":true,"risk":"low","expected":["pubmed","local_knowledge_base"]}
+{"id":"tool-004","intent":"document_summary","agent":"retrieval","scopes":["kb:read"],"online":false,"risk":"low","expected":["local_knowledge_base","get_document_evidence_context","get_medical_table"]}
+{"id":"tool-005","intent":"symptom_consultation","agent":"retrieval","scopes":["kb:read","memory:read"],"online":false,"risk":"low","expected":["local_knowledge_base","conversation_memory"]}
+{"id":"tool-006","intent":"conversation_memory","agent":"retrieval","scopes":["memory:read"],"online":false,"risk":"low","expected":["conversation_memory"]}
+{"id":"tool-007","intent":"emergency_risk","agent":"retrieval","scopes":["kb:read","online:read"],"online":true,"risk":"emergency","expected":[]}
+{"id":"tool-008","intent":"out_of_scope","agent":"supervisor","scopes":[],"online":false,"risk":"low","expected":[]}
+{"id":"tool-009","intent":"medical_knowledge","agent":"retrieval","scopes":["kb:read","online:read"],"online":true,"risk":"low","expected":["local_knowledge_base","msd_manual"]}
+{"id":"tool-010","intent":"document_summary","agent":"answer_generation","scopes":["kb:read"],"online":false,"risk":"low","expected":["get_medical_table"]}

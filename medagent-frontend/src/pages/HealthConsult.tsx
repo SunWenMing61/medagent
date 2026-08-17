@@ -76,6 +76,7 @@ const HealthConsult: React.FC = () => {
           autoLoadLastSession={!initialSessionId}
           // 会话类型标记为 "health"，用于后端区分健康咨询和通用问答
           sessionType="health"
+          defaultAssistantProfile="memory_qa"
         />
       </div>
     </div>

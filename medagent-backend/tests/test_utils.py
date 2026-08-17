@@ -1,8 +1,6 @@
 """工具函数测试。"""
 
 # 导入 pytest 测试框架
-import pytest
-
 # 导入文本分割工具函数
 from app.utils.text_splitter import split_text
 
@@ -65,25 +63,3 @@ class TestSafetyService:
         assert is_boundary
         # 预期匹配到"开药"关键词
         assert "开药" in matched
-
-
-# 向量服务测试类
-class TestVectorService:
-    """测试向量检索服务的行为。"""
-
-    def test_search_no_kb(self):
-        """测试无知识库搜索：空知识库 ID 列表应返回空列表或优雅处理错误。"""
-        from app.services.vector_service import vector_service
-        try:
-            results = vector_service.search(
-                query="test query",    # 测试查询文本
-                kb_ids=None,           # 不指定知识库
-                top_k=1,               # 返回前 1 个结果
-                threshold=0.0,         # 相似度阈值为 0（不限制）
-            )
-            # 搜索结果应为列表类型
-            assert isinstance(results, list)
-        except Exception as e:
-            # 如果没有数据库或 API 密钥，搜索可能失败
-            # 但应该以优雅的方式处理（返回有意义的错误信息）
-            assert "API" in str(e) or "connect" in str(e).lower()

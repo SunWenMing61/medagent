@@ -1,0 +1,11 @@
+{
+  "run_kind": "isolated_fixed_corpus_online_baseline",
+  "workflow": "legacy_rag_subagent_plus_aggregator",
+  "prompt_version": "current_worktree-2026-08-08",
+  "model": "deepseek-chat",
+  "embedding_model": "text-embedding-v3",
+  "retrieval_strategy": "dense_sparse_rrf_in_memory",
+  "top_k": 5,
+  "temperature": 0.5,
+  "notes": "Synthetic fixed evidence only; no business or patient data. DB persistence and production SQL retrieval are intentionally excluded."
+}

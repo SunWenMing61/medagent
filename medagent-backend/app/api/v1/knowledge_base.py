@@ -30,7 +30,7 @@ def _kb_to_response(kb: KnowledgeBase) -> KBResponse:
         id=kb.id,                       # 知识库 ID
         name=kb.name,                   # 知识库名称
         description=kb.description,     # 知识库描述
-        type=kb.type,                   # 知识库类型（general/drug/paper/chat_history 等）
+        type=kb.type,                   # 知识库类型（general/drug/paper 等）
         owner_id=kb.owner_id,           # 拥有者用户 ID
         visibility=kb.visibility,        # 可见性（public/private）
         status=kb.status,               # 状态（1=启用，0=禁用）
@@ -48,6 +48,7 @@ def create_kb(
 ):
     # 创建知识库对象
     kb = KnowledgeBase(
+        tenant_id=getattr(current_user, "tenant_id", 1),
         name=req.name,                           # 知识库名称
         description=req.description or "",       # 描述，可选，默认为空
         type=req.type,                           # 类型
@@ -144,9 +145,6 @@ def delete_kb(
     kb = mysql_db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id).first()
     if not kb:
         raise HTTPException(status_code=404, detail="Knowledge base not found")
-    # 禁止删除聊天历史知识库（系统内置，不可删除）
-    if kb.type == "chat_history":
-        raise HTTPException(status_code=400, detail="对话历史知识库不可删除")
     # 权限检查：只有知识库拥有者或管理员可以删除
     if kb.owner_id != current_user.id and current_user.role != "admin":
         raise HTTPException(status_code=403, detail="Access denied")

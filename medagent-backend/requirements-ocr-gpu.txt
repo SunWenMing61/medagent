@@ -1,0 +1,3 @@
+-r requirements.txt
+# Install the CUDA-matched torch/torchvision wheels from https://pytorch.org first.
+# This file intentionally does not pin a CUDA runtime that may mismatch the host.

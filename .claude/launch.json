@@ -1,0 +1,22 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "medagent-backend",
+      "runtimeExecutable": "uvicorn",
+      "runtimeArgs": ["app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"],
+      "port": 8000,
+      "cwd": "C:\\Users\\swm_0\\medagent\\medagent-backend",
+      "env": {
+        "PYTHONPATH": "C:\\Users\\swm_0\\medagent\\medagent-backend"
+      }
+    },
+    {
+      "name": "medagent-frontend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["./node_modules/vite/bin/vite.js", "--host", "0.0.0.0", "--port", "3000"],
+      "port": 3000,
+      "cwd": "C:\\Users\\swm_0\\medagent\\medagent-frontend"
+    }
+  ]
+}

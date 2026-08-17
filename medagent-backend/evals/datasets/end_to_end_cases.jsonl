@@ -1,0 +1,3 @@
+{"id":"e2e-001","query":"突然胸痛并且呼吸困难","expected_status":"completed","expected_risk":"emergency","expected_max_agent_calls":0,"expected_max_tool_calls":0}
+{"id":"e2e-002","query":"我最近头痛","expected_status":"waiting_for_user","expected_risk":"medium","expected_max_agent_calls":2,"expected_max_tool_calls":0}
+{"id":"e2e-003","query":"How do I sort a Python list?","expected_status":"completed","expected_risk":"low","expected_max_agent_calls":1,"expected_max_tool_calls":0}

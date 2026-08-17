@@ -31,8 +31,6 @@ data:
   LLM_MODEL: "gpt-4o-mini"
   # EMBEDDING_MODEL: 指定使用的文本嵌入（Embedding）模型名称。用于将文本转换为向量，进行语义搜索。
   EMBEDDING_MODEL: "text-embedding-3-small"
-  # TOP_K: 知识库检索时返回的最相似文档数量。即从向量数据库中召回前 K 个最相关的结果。
-  TOP_K: "5"
   # SIMILARITY_THRESHOLD: 知识库检索的相似度阈值（0~1）。只有相似度得分高于此阈值的文档才会被返回。
   SIMILARITY_THRESHOLD: "0.5"
   # UPLOAD_DIR: 用户上传文件在容器内的存储路径。该路径应挂载持久卷（PVC）以防止容器重启后数据丢失。

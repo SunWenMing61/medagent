@@ -1,0 +1,2 @@
+{"id":"clarify-001","query":"我最近头痛","expected_need_clarification":true,"min_questions":1,"max_questions":3}
+{"id":"clarify-002","query":"我头痛已经持续3天，程度较轻","expected_need_clarification":false,"min_questions":0,"max_questions":0}

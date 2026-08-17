@@ -1,0 +1,548 @@
+{
+  "report_type": "executed_offline_pdf_cleaning_tooling_benchmark",
+  "generated_at": "2026-08-05T03:28:01.599792+00:00",
+  "dataset_notice": "Synthetic deterministic regression benchmark; not clinical validation, live provider quality, or an LLM capability score.",
+  "baseline_definition": "NFKC plus whitespace cleanup, fixed-width chunks, default local tool, and no runtime governance.",
+  "sample_sizes": {
+    "cleaning": 12,
+    "rag": 10,
+    "tool_selection": 10
+  },
+  "results": {
+    "pdf_cleaning": {
+      "dataset_size": 12,
+      "baseline": {
+        "exact_match": 0.16666666666666666,
+        "character_accuracy": 0.9677723935897364,
+        "medical_symbol_preservation": 0.25,
+        "header_footer_precision": 0.0,
+        "header_footer_recall": 0.0,
+        "header_footer_f1": 0.0,
+        "cross_page_table_accuracy": 0.0,
+        "structural_block_containment": 0.75,
+        "page_mapping_accuracy": 1.0,
+        "latency_p95_ms_per_case": 0.07550000009359792
+      },
+      "improved": {
+        "exact_match": 1.0,
+        "character_accuracy": 1.0,
+        "medical_symbol_preservation": 1.0,
+        "header_footer_precision": 1.0,
+        "header_footer_recall": 1.0,
+        "header_footer_f1": 1.0,
+        "cross_page_table_accuracy": 1.0,
+        "structural_block_containment": 1.0,
+        "page_mapping_accuracy": 1.0,
+        "latency_p95_ms_per_case": 1.8319000009796582
+      },
+      "per_case": {
+        "baseline": [
+          {
+            "id": "clean-001",
+            "focus": "medical_symbols",
+            "exact": false,
+            "character_accuracy": 0.96,
+            "output": "SpO2 ≥ 95%,eGFR 60 mL/min"
+          },
+          {
+            "id": "clean-002",
+            "focus": "hyphenation",
+            "exact": false,
+            "character_accuracy": 0.9787234042553191,
+            "output": "The micro-\nvascular complication was documented."
+          },
+          {
+            "id": "clean-003",
+            "focus": "hyphenation",
+            "exact": false,
+            "character_accuracy": 0.9873417721518988,
+            "output": "A dose-\ndependent response was observed."
+          },
+          {
+            "id": "clean-004",
+            "focus": "ocr_numeric",
+            "exact": false,
+            "character_accuracy": 0.967741935483871,
+            "output": "Initial dose O.5 mg once daily."
+          },
+          {
+            "id": "clean-005",
+            "focus": "ocr_numeric",
+            "exact": false,
+            "character_accuracy": 0.96,
+            "output": "Maximum dose l0 mg daily."
+          },
+          {
+            "id": "clean-006",
+            "focus": "medical_symbols",
+            "exact": false,
+            "character_accuracy": 0.9523809523809523,
+            "output": "Administer 25 u g intravenously."
+          },
+          {
+            "id": "clean-007",
+            "focus": "unicode_whitespace",
+            "exact": false,
+            "character_accuracy": 0.9777777777777777,
+            "output": "血压​应控制在 130/80 mmHg 以下。"
+          },
+          {
+            "id": "clean-008",
+            "focus": "line_merge",
+            "exact": false,
+            "character_accuracy": 0.9696969696969697,
+            "output": "患者无发热\n无胸痛,生命体征平稳。"
+          },
+          {
+            "id": "clean-009",
+            "focus": "medical_symbols",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "β受体阻滞剂 ± 利尿剂"
+          },
+          {
+            "id": "clean-010",
+            "focus": "medical_symbols",
+            "exact": false,
+            "character_accuracy": 0.9285714285714286,
+            "output": "Na+ 140 mmol/L,K+ 4.2 mmol/L"
+          },
+          {
+            "id": "clean-011",
+            "focus": "line_merge",
+            "exact": false,
+            "character_accuracy": 0.9310344827586207,
+            "output": "白细胞 6.2 × 109/L\n血红蛋白 132 g/L。"
+          },
+          {
+            "id": "clean-012",
+            "focus": "no_regression",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "Follow-up was scheduled in 4 weeks."
+          }
+        ],
+        "improved": [
+          {
+            "id": "clean-001",
+            "focus": "medical_symbols",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "SpO₂ ≥ 95%,eGFR 60 mL/min"
+          },
+          {
+            "id": "clean-002",
+            "focus": "hyphenation",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "The microvascular complication was documented."
+          },
+          {
+            "id": "clean-003",
+            "focus": "hyphenation",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "A dose-dependent response was observed."
+          },
+          {
+            "id": "clean-004",
+            "focus": "ocr_numeric",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "Initial dose 0.5 mg once daily."
+          },
+          {
+            "id": "clean-005",
+            "focus": "ocr_numeric",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "Maximum dose 10 mg daily."
+          },
+          {
+            "id": "clean-006",
+            "focus": "medical_symbols",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "Administer 25 μg intravenously."
+          },
+          {
+            "id": "clean-007",
+            "focus": "unicode_whitespace",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "血压应控制在 130/80 mmHg 以下。"
+          },
+          {
+            "id": "clean-008",
+            "focus": "line_merge",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "患者无发热无胸痛,生命体征平稳。"
+          },
+          {
+            "id": "clean-009",
+            "focus": "medical_symbols",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "β受体阻滞剂 ± 利尿剂"
+          },
+          {
+            "id": "clean-010",
+            "focus": "medical_symbols",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "Na⁺ 140 mmol/L,K⁺ 4.2 mmol/L"
+          },
+          {
+            "id": "clean-011",
+            "focus": "line_merge",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "白细胞 6.2 × 10⁹/L 血红蛋白 132 g/L。"
+          },
+          {
+            "id": "clean-012",
+            "focus": "no_regression",
+            "exact": true,
+            "character_accuracy": 1.0,
+            "output": "Follow-up was scheduled in 4 weeks."
+          }
+        ]
+      }
+    },
+    "rag_abc": {
+      "dataset_size": 10,
+      "variants": {
+        "A_raw_fixed": {
+          "recall_at_5": 0.2,
+          "recall_at_10": 0.2,
+          "mrr": 0.26153846153846155,
+          "page_citation_accuracy_at_5": 0.0,
+          "table_qa_accuracy": 0.0,
+          "latency_p95_ms_per_query": 0.14789999841013923,
+          "ranks": [
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            1,
+            1
+          ]
+        },
+        "B_cleaned_structural": {
+          "recall_at_5": 0.9,
+          "recall_at_10": 0.9,
+          "mrr": 0.9076923076923077,
+          "page_citation_accuracy_at_5": 0.9,
+          "table_qa_accuracy": 0.0,
+          "latency_p95_ms_per_query": 0.11529999756021425,
+          "ranks": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            13,
+            1,
+            1
+          ]
+        },
+        "C_parent_child_table_aware": {
+          "recall_at_5": 1.0,
+          "recall_at_10": 1.0,
+          "mrr": 1.0,
+          "page_citation_accuracy_at_5": 1.0,
+          "table_qa_accuracy": 1.0,
+          "latency_p95_ms_per_query": 0.10230000043520704,
+          "ranks": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        }
+      }
+    },
+    "tool_selection": {
+      "dataset_size": 10,
+      "baseline": {
+        "selection_exact_accuracy": 0.2,
+        "missing_tool_rate": 0.6,
+        "unnecessary_tool_rate": 0.25,
+        "restricted_case_block_rate": 0.5,
+        "maximum_tools_exposed": 1
+      },
+      "improved": {
+        "selection_exact_accuracy": 1.0,
+        "missing_tool_rate": 0.0,
+        "unnecessary_tool_rate": 0.0,
+        "restricted_case_block_rate": 1.0,
+        "maximum_tools_exposed": 3
+      },
+      "per_case": {
+        "baseline": [
+          {
+            "id": "tool-001",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": false,
+            "missing": 2,
+            "unnecessary": 0,
+            "expected_count": 3,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-002",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 1,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-003",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": false,
+            "missing": 1,
+            "unnecessary": 0,
+            "expected_count": 2,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-004",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": false,
+            "missing": 2,
+            "unnecessary": 0,
+            "expected_count": 3,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-005",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": false,
+            "missing": 1,
+            "unnecessary": 0,
+            "expected_count": 2,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-006",
+            "predicted": [],
+            "exact": false,
+            "missing": 1,
+            "unnecessary": 0,
+            "expected_count": 1,
+            "predicted_count": 0
+          },
+          {
+            "id": "tool-007",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": false,
+            "missing": 0,
+            "unnecessary": 1,
+            "expected_count": 0,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-008",
+            "predicted": [],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 0,
+            "predicted_count": 0
+          },
+          {
+            "id": "tool-009",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": false,
+            "missing": 1,
+            "unnecessary": 0,
+            "expected_count": 2,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-010",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": false,
+            "missing": 1,
+            "unnecessary": 1,
+            "expected_count": 1,
+            "predicted_count": 1
+          }
+        ],
+        "improved": [
+          {
+            "id": "tool-001",
+            "predicted": [
+              "local_knowledge_base",
+              "fda_drug_label",
+              "msd_manual"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 3,
+            "predicted_count": 3
+          },
+          {
+            "id": "tool-002",
+            "predicted": [
+              "local_knowledge_base"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 1,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-003",
+            "predicted": [
+              "pubmed",
+              "local_knowledge_base"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 2,
+            "predicted_count": 2
+          },
+          {
+            "id": "tool-004",
+            "predicted": [
+              "local_knowledge_base",
+              "get_document_evidence_context",
+              "get_medical_table"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 3,
+            "predicted_count": 3
+          },
+          {
+            "id": "tool-005",
+            "predicted": [
+              "local_knowledge_base",
+              "conversation_memory"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 2,
+            "predicted_count": 2
+          },
+          {
+            "id": "tool-006",
+            "predicted": [
+              "conversation_memory"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 1,
+            "predicted_count": 1
+          },
+          {
+            "id": "tool-007",
+            "predicted": [],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 0,
+            "predicted_count": 0
+          },
+          {
+            "id": "tool-008",
+            "predicted": [],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 0,
+            "predicted_count": 0
+          },
+          {
+            "id": "tool-009",
+            "predicted": [
+              "local_knowledge_base",
+              "msd_manual"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 2,
+            "predicted_count": 2
+          },
+          {
+            "id": "tool-010",
+            "predicted": [
+              "get_medical_table"
+            ],
+            "exact": true,
+            "missing": 0,
+            "unnecessary": 0,
+            "expected_count": 1,
+            "predicted_count": 1
+          }
+        ]
+      }
+    }
+  },
+  "headline_lifts_vs_baseline": {
+    "cleaning_exact_match": {
+      "absolute": 0.8333333333333334,
+      "absolute_percentage_points": 83.33333333333334,
+      "relative": 5.000000000000001
+    },
+    "cleaning_character_accuracy": {
+      "absolute": 0.032227606410263565,
+      "absolute_percentage_points": 3.2227606410263565,
+      "relative": 0.03330081186829728
+    },
+    "rag_recall_at_5_C_vs_A": {
+      "absolute": 0.8,
+      "absolute_percentage_points": 80.0,
+      "relative": 4.0
+    },
+    "rag_mrr_C_vs_A": {
+      "absolute": 0.7384615384615385,
+      "absolute_percentage_points": 73.84615384615385,
+      "relative": 2.823529411764706
+    },
+    "tool_selection_accuracy": {
+      "absolute": 0.8,
+      "absolute_percentage_points": 80.0,
+      "relative": 4.0
+    }
+  }
+}

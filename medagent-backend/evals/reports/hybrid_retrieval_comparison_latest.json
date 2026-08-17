@@ -1,0 +1,125 @@
+{
+  "schema_version": "hybrid-retrieval-comparison-v1",
+  "generated_at": "2026-08-08T07:39:54.798294+00:00",
+  "dataset": {
+    "path": "C:\\Users\\swm_0\\medagent\\medagent-backend\\evals\\datasets\\memory_retrieval_v2_cases.json",
+    "case_count": 10,
+    "clinical_validity": false
+  },
+  "baseline": {
+    "strategy": "dense_only",
+    "metrics": {
+      "accuracy_at_1": 0.2,
+      "precision_at_1": 0.2,
+      "recall_at_1": 0.2,
+      "precision_at_3": 0.13333333333333333,
+      "recall_at_3": 0.4,
+      "ndcg_at_3": 0.3,
+      "mrr": 0.4166666666666667
+    }
+  },
+  "candidate": {
+    "strategy": "dense_sparse_exact_rrf",
+    "metrics": {
+      "accuracy_at_1": 1.0,
+      "precision_at_1": 1.0,
+      "recall_at_1": 1.0,
+      "precision_at_3": 0.3333333333333333,
+      "recall_at_3": 1.0,
+      "ndcg_at_3": 1.0,
+      "mrr": 1.0
+    }
+  },
+  "improvement": {
+    "absolute": {
+      "accuracy_at_1": 0.8,
+      "precision_at_1": 0.8,
+      "recall_at_1": 0.8,
+      "precision_at_3": 0.19999999999999998,
+      "recall_at_3": 0.6,
+      "ndcg_at_3": 0.7,
+      "mrr": 0.5833333333333333
+    },
+    "relative": {
+      "accuracy_at_1": 4.0,
+      "precision_at_1": 4.0,
+      "recall_at_1": 4.0,
+      "precision_at_3": 1.5,
+      "recall_at_3": 1.4999999999999998,
+      "ndcg_at_3": 2.3333333333333335,
+      "mrr": 1.3999999999999997
+    }
+  },
+  "per_case": [
+    {
+      "case_id": 1,
+      "query": "ICD-10 E11.9 诊断",
+      "relevant": "r1",
+      "baseline_rank": 4,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 2,
+      "query": "阿司匹林禁忌",
+      "relevant": "r2",
+      "baseline_rank": 4,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 3,
+      "query": "PMID 38901234",
+      "relevant": "r3",
+      "baseline_rank": 4,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 4,
+      "query": "eGFR 小于30 剂量",
+      "relevant": "r4",
+      "baseline_rank": 4,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 5,
+      "query": "NCT01234567 结果",
+      "relevant": "r5",
+      "baseline_rank": 3,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 6,
+      "query": "妊娠期华法林禁忌",
+      "relevant": "r6",
+      "baseline_rank": 4,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 7,
+      "query": "青霉素过敏头孢交叉反应",
+      "relevant": "r7",
+      "baseline_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 8,
+      "query": "CYP2C19 氯吡格雷",
+      "relevant": "r8",
+      "baseline_rank": 4,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 9,
+      "query": "HER2 阳性乳腺癌",
+      "relevant": "r9",
+      "baseline_rank": 1,
+      "hybrid_rank": 1
+    },
+    {
+      "case_id": 10,
+      "query": "SpO2 低于90%",
+      "relevant": "r10",
+      "baseline_rank": 3,
+      "hybrid_rank": 1
+    }
+  ]
+}

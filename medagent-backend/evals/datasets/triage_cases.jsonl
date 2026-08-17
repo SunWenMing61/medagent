@@ -1,0 +1,4 @@
+{"id":"triage-001","query":"突然胸痛并且呼吸困难","expected_intent":"emergency_risk","expected_risk":"emergency","expected_emergency":true,"expected_clarification":false}
+{"id":"triage-002","query":"我最近头痛","expected_intent":"symptom_consultation","expected_risk":"medium","expected_emergency":false,"expected_clarification":true}
+{"id":"triage-003","query":"请给我开药并调整剂量","expected_intent":"drug_information","expected_risk":"high","expected_emergency":false,"expected_clarification":false}
+{"id":"triage-004","query":"How do I sort a Python list?","expected_intent":"out_of_scope","expected_risk":"low","expected_emergency":false,"expected_clarification":false}

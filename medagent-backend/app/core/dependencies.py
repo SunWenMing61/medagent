@@ -1,9 +1,13 @@
 # 导入 FastAPI 的 Depends（依赖注入）、HTTPException（HTTP 异常）和 status（HTTP 状态码）模块
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 # 导入 FastAPI 的 HTTPBearer（Bearer 令牌认证方案）和 HTTPAuthorizationCredentials（认证凭据类型）
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # 导入 SQLAlchemy 的 Session 类型，用于类型注解
 from sqlalchemy.orm import Session
+
+import time
+import threading
+from collections import defaultdict
 
 # 导入自定义的 JWT 令牌解码函数
 from app.core.security import decode_access_token
@@ -11,6 +15,52 @@ from app.core.security import decode_access_token
 from app.db.session import get_mysql_db
 # 导入 User 模型类，用于数据库查询
 from app.models.user import User
+
+# 创建 HTTP Bearer 认证方案实例
+security = HTTPBearer()
+
+# ==================== 内存速率限制器 ====================
+
+
+class _RateLimiter:
+    """基于滑动窗口的内存速率限制器（单进程适用）。"""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._windows: dict = defaultdict(list)
+
+    def check(self, key: str, max_requests: int, window_seconds: int = 60) -> bool:
+        now = time.time()
+        cutoff = now - window_seconds
+        with self._lock:
+            window = self._windows[key]
+            self._windows[key] = [ts for ts in window if ts > cutoff]
+            if len(self._windows[key]) >= max_requests:
+                return False
+            self._windows[key].append(now)
+        return True
+
+
+_rate_limiter = _RateLimiter()
+
+RATE_LIMIT_CONFIG = {
+    "auth": (10, 60),
+    "chat": (30, 60),
+    "default": (60, 60),
+}
+
+
+def rate_limit(limit_type: str = "default"):
+    """获取速率限制依赖注入函数。"""
+    def _rate_limit_dependency(request: Request):
+        client_ip = request.client.host if request.client else "unknown"
+        max_reqs, window = RATE_LIMIT_CONFIG.get(limit_type, RATE_LIMIT_CONFIG["default"])
+        if not _rate_limiter.check(client_ip, max_reqs, window):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Rate limit exceeded. Max {max_reqs} requests per {window}s.",
+            )
+    return _rate_limit_dependency
 
 # 创建 HTTP Bearer 认证方案实例
 # 自动从请求头中提取 Authorization: Bearer <token> 中的令牌

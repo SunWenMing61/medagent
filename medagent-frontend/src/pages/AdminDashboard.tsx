@@ -76,7 +76,7 @@ const AdminDashboard: React.FC = () => {
       bgColor: token.colorSuccessBg, // 成功色背景
     },
     {
-      title: '线下文档总数', // 卡片标题
+      title: '文档总数', // 卡片标题
       value: stats?.uploaded_documents ?? stats?.total_documents ?? stats?.doc_count ?? 0, // 按优先级取三个字段，兼容不同后端返回格式
       icon: <FileOutlined />, // 文件图标
       color: token.colorWarning, // 警告色（橙色系）

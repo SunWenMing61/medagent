@@ -19,6 +19,7 @@ psycopg2-binary>=2.9.10          # PostgreSQL 数据库驱动（二进制版，�
 pgvector>=0.2.4                  # pgvector 的 Python 客户端库，支持向量类型和近似最近邻搜索
 # MySQL / MariaDB（存储关系型数据：用户、知识库、文档、会话记录、反馈）
 pymysql>=1.1.0                   # MySQL 数据库驱动（纯 Python 实现）
+pymongo>=4.10.0                  # MongoDB 驱动（多轮会话记忆持久化）
 # ORM 和数据库迁移
 sqlalchemy>=2.0.23               # SQLAlchemy ORM，提供数据库表映射和查询构建器
 alembic>=1.13.0                  # 数据库迁移工具，与 SQLAlchemy 配合管理 Schema 版本变更
@@ -41,6 +42,8 @@ langgraph>=0.0.20                # LangGraph，构建有状态多步骤 LLM 工�
 
 # ── 文件处理 ────────────────────────────────────────────────────────────────────
 PyMuPDF>=1.25.0                  # PDF 文本提取库（fitz），用于解析上传的 PDF 医学文档
+easyocr>=1.7.2                   # 扫描 PDF 的中英文 OCR
+numpy>=1.26.0                    # OCR 图像数组处理
 python-docx>=1.0.0               # Word 文档（.docx）读写库，解析上传的 Word 文档
 beautifulsoup4>=4.12.0           # HTML 解析库，用于抓取和解析网页内容（联网搜索模式）
 

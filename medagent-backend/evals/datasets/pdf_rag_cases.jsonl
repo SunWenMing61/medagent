@@ -1,0 +1,10 @@
+{"id":"rag-001","query":"SpO₂ target","raw":"Clinical target: SpO₂ ≥ 95%.","expected":"Clinical target: SpO₂ ≥ 95%.","page":2,"content_type":"paragraph"}
+{"id":"rag-002","query":"microvascular complication","raw":"The micro-\nvascular complication requires screening.","expected":"The microvascular complication requires screening.","page":4,"content_type":"paragraph"}
+{"id":"rag-003","query":"initial 0.5 mg","raw":"Initial dose O.5 mg once daily.","expected":"Initial dose 0.5 mg once daily.","page":6,"content_type":"paragraph","method":"ocr","confidence":0.78}
+{"id":"rag-004","query":"maximum 10 mg","raw":"Maximum dose l0 mg daily.","expected":"Maximum dose 10 mg daily.","page":7,"content_type":"paragraph","method":"ocr","confidence":0.76}
+{"id":"rag-005","query":"25 μg intravenously","raw":"Administer 25 u g intravenously.","expected":"Administer 25 μg intravenously.","page":8,"content_type":"paragraph","method":"ocr","confidence":0.80}
+{"id":"rag-006","query":"10⁹/L leukocyte","raw":"Leukocyte count was 6.2 × 10⁹/L.","expected":"Leukocyte count was 6.2 × 10⁹/L.","page":10,"content_type":"paragraph"}
+{"id":"rag-007","query":"dose-dependent response","raw":"A dose-\ndependent response was observed.","expected":"A dose-dependent response was observed.","page":12,"content_type":"paragraph"}
+{"id":"rag-008","query":"electrolytes Na⁺ K⁺","raw":"Na⁺ 140 mmol/L and K⁺ 4.2 mmol/L.","expected":"Na⁺ 140 mmol/L and K⁺ 4.2 mmol/L.","page":14,"content_type":"table","table_context":"Electrolytes"}
+{"id":"rag-009","query":"130/80 mmHg target","raw":"Blood pressure target is 130/80 mmHg.","expected":"Blood pressure target is 130/80 mmHg.","page":16,"content_type":"paragraph"}
+{"id":"rag-010","query":"follow-up 4 weeks","raw":"Follow-up was scheduled in 4 weeks.","expected":"Follow-up was scheduled in 4 weeks.","page":18,"content_type":"paragraph"}
